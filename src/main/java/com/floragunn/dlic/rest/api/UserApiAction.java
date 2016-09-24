@@ -14,7 +14,7 @@
 
 package com.floragunn.dlic.rest.api;
 
-import java.util.Set;
+import java.util.Objects;
 
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.ClusterService;
@@ -32,63 +32,73 @@ import com.floragunn.dlic.rest.validation.InternalUsersValidator;
 import com.floragunn.searchguard.auditlog.AuditLog;
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.ConfigurationLoader;
+import com.floragunn.searchguard.crypto.BCrypt;
 
 public class UserApiAction extends AbstractApiAction {
 
-    @Inject
-    public UserApiAction(final Settings settings, final RestController controller, final Client client, final AdminDNs adminDNs,
-            final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog) {
-        super(settings, controller, client, adminDNs, cl, cs, auditLog);
-        controller.registerHandler(Method.DELETE, "/_searchguard/api/user/{name}", this);
-        controller.registerHandler(Method.POST, "/_searchguard/api/user/{name}", this);
+	@Inject
+	public UserApiAction(final Settings settings, final RestController controller, final Client client,
+			final AdminDNs adminDNs, final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog) {
+		super(settings, controller, client, adminDNs, cl, cs, auditLog);
+		controller.registerHandler(Method.DELETE, "/_searchguard/api/user/{name}", this);
+		controller.registerHandler(Method.POST, "/_searchguard/api/user/{name}", this);
+	}
+
+	@Override
+	protected Tuple<String[], RestResponse> handleDelete(final RestRequest request, final Client client)
+			throws Throwable {
+		final String username = request.param("name");
+
+		if (username == null || username.length() == 0) {
+			return new Tuple<String[], RestResponse>(new String[0], errorResponse(RestStatus.BAD_REQUEST, "No name given"));
+		}
+
+		final Settings.Builder internaluser = load("internalusers");
+
+		if (removeKeysStartingWith(internaluser.internalMap(), username + ".")) {
+			save(client, request, "internalusers", internaluser);
+			return new Tuple<String[], RestResponse>(new String[] { "internalusers" },
+					new BytesRestResponse(RestStatus.OK));
+		}
+
+		return new Tuple<String[], RestResponse>(new String[0], new BytesRestResponse(RestStatus.NOT_FOUND));
+	}
+
+	@Override
+	protected Tuple<String[], RestResponse> handlePost(final RestRequest request, final Client client)
+			throws Throwable {
+		final String username = request.param("name");
+
+		if (username == null || username.length() == 0) {
+			return new Tuple<String[], RestResponse>(new String[0], errorResponse(RestStatus.BAD_REQUEST, "No name given"));
+		}
+
+		final Settings.Builder additionalSettingsBuilder = toSettingsBuilder(request.content());
+		
+		// validate raw input
+		InternalUsersValidator validator = new InternalUsersValidator();
+		if (!validator.validateSettings(additionalSettingsBuilder.build())) {
+			return new Tuple<String[], RestResponse>(new String[0],
+					new BytesRestResponse(RestStatus.BAD_REQUEST, validator.errorsAsXContent()));
+		}
+		
+		// if password is set, it takes precedence over hash
+		String plainTextPassword = additionalSettingsBuilder.get("password");
+		if(plainTextPassword != null && plainTextPassword.length() > 0) {
+			additionalSettingsBuilder.remove("password");
+			additionalSettingsBuilder.put("hash", hash(plainTextPassword.getBytes("UTF-8")));
+		}
+		
+		final Settings additionalSettings = additionalSettingsBuilder.build();
+		
+		final Settings.Builder internaluser = load("internalusers");
+		internaluser.put(prependValueToEachKey(additionalSettings.getAsMap(), username + "."));
+		save(client, request, "internalusers", internaluser);
+		return new Tuple<String[], RestResponse>(new String[] { "internalusers" },successResponse());
+				
+	}
+
+    public static String hash(final byte[] clearTextPassword) {
+        return BCrypt.hashpw(Objects.requireNonNull(clearTextPassword), BCrypt.gensalt(12));
     }
-
-    @Override
-    protected Tuple<String[], RestResponse> handleApiRequest(final RestRequest request, final Client client) throws Throwable {
-        switch (request.method()) {
-        case DELETE:
-            return handleDelete(request, client);
-        case POST:
-            return handlePost(request, client);
-        default:
-            throw new IllegalArgumentException(request.method() + " not supported");
-        }
-    }
-
-    protected Tuple<String[], RestResponse> handleDelete(final RestRequest request, final Client client) throws Throwable {
-        final String username = request.param("name");
-
-        if (username == null || username.length() == 0) {
-            return new Tuple<String[], RestResponse>(new String[0], new BytesRestResponse(RestStatus.BAD_REQUEST, "No name given"));
-        }
-
-        final Settings.Builder internaluser = load("internalusers");
-
-        if (removeKeysStartingWith(internaluser.internalMap(), username + ".")) {
-            save(client, request, "internalusers", internaluser);
-            return new Tuple<String[], RestResponse>(new String[] { "internalusers" }, new BytesRestResponse(RestStatus.OK));
-        }
-
-        return new Tuple<String[], RestResponse>(new String[0], new BytesRestResponse(RestStatus.NOT_FOUND));
-    }
-
-    protected Tuple<String[], RestResponse> handlePost(final RestRequest request, final Client client) throws Throwable {
-        final String username = request.param("name");
-
-        if (username == null || username.length() == 0) {
-            return new Tuple<String[], RestResponse>(new String[0], new BytesRestResponse(RestStatus.BAD_REQUEST, "No name given"));
-        }
-
-        final Settings additionalSettings = toSettings(request.content());
-        
-        InternalUsersValidator validator = new InternalUsersValidator();
-        if (!validator.validateSettings(additionalSettings)) {
-        	return new Tuple<String[], RestResponse>(new String[0], new BytesRestResponse(RestStatus.BAD_REQUEST, validator.errorsAsXContent()));
-        }
-        final Settings.Builder internaluser = load("internalusers");
-        internaluser.put(prependValueToEachKey(additionalSettings.getAsMap(), username + "."));
-        save(client, request, "internalusers", internaluser);
-        return new Tuple<String[], RestResponse>(new String[] { "internalusers" }, new BytesRestResponse(RestStatus.OK));
-    }
-
 }

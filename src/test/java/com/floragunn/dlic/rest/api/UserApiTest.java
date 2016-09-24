@@ -13,11 +13,6 @@ import test.helper.rest.RestHelper.HttpResponse;
 
 public class UserApiTest extends AbstractRestApiUnitTest {
 
-	// controller.registerHandler(Method.DELETE,
-	// "/_searchguard/api/user/{name}", this);
-	// controller.registerHandler(Method.POST, "/_searchguard/api/user/{name}",
-	// this);
-
 	@Test
 	public void testUserApi() throws Exception {
 
@@ -45,8 +40,6 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody()).build();
 		Assert.assertEquals(settings.get("status"), AbstractConfigurationValidator.INVALID_CONFIGURATION_MESSAGE);
-		Assert.assertTrue(
-				settings.get(AbstractConfigurationValidator.MISSING_MANDATORY_KEYS_KEY + ".keys").contains("hash"));
 		Assert.assertTrue(settings.get(AbstractConfigurationValidator.INVALID_KEYS_KEY + ".keys").contains("some"));
 		Assert.assertTrue(settings.get(AbstractConfigurationValidator.INVALID_KEYS_KEY + ".keys").contains("other"));
 
@@ -92,6 +85,21 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 				new BasicHeader("Authorization", "Basic " + encodeBasicHeader("barthelmus", "barthelmus")));
 		Assert.assertEquals(HttpStatus.SC_UNAUTHORIZED, response.getStatusCode());
 
+		// use password instead of hash
+		rh.sendHTTPClientCertificate = true;
+		response = rh.executePostRequest("/_searchguard/api/user/barthelmus", "{password: \"correctpassword\"}",
+				new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+
+		rh.sendHTTPClientCertificate = false;
+
+		response = rh.executeGetRequest("",
+				new BasicHeader("Authorization", "Basic " + encodeBasicHeader("barthelmus", "wrongpassword")));
+		Assert.assertEquals(HttpStatus.SC_UNAUTHORIZED, response.getStatusCode());
+		
+		response = rh.executeGetRequest("",
+				new BasicHeader("Authorization", "Basic " + encodeBasicHeader("barthelmus", "correctpassword")));
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 	}
 
 }

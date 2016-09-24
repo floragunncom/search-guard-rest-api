@@ -30,8 +30,6 @@ import com.floragunn.searchguard.configuration.ConfigurationService;
 
 public class GetConfigurationApiAction extends AbstractApiAction {
 
-	protected final ESLogger log = Loggers.getLogger(this.getClass());
-
 	@Inject
 	public GetConfigurationApiAction(final Settings settings, final RestController controller, final Client client,
 			final AdminDNs adminDNs, final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog) {
@@ -41,25 +39,21 @@ public class GetConfigurationApiAction extends AbstractApiAction {
 	}
 
 	@Override
-	protected Tuple<String[], RestResponse> handleApiRequest(RestRequest request, Client client) throws Throwable {
+	protected Tuple<String[], RestResponse> handleGet(RestRequest request, Client client) throws Throwable {
 		final String configname = request.param("configname");
 
-		if (configname == null || configname.length() == 0) {
+		if (configname == null || configname.length() == 0
+				|| !Arrays.asList(ConfigurationService.CONFIGNAMES).contains(configname)) {
 			return new Tuple<String[], RestResponse>(new String[0],
-					new BytesRestResponse(RestStatus.BAD_REQUEST, "No configuration name given, must be one of "
+					errorResponse(RestStatus.BAD_REQUEST, "No configuration name given, must be one of "
 							+ String.join(",", ConfigurationService.CONFIGNAMES)));
-		}
 
-		if (!Arrays.asList(ConfigurationService.CONFIGNAMES).contains(configname)) {
-			return new Tuple<String[], RestResponse>(new String[0],
-					new BytesRestResponse(RestStatus.BAD_REQUEST, "Bad configuration name given, must be one of "
-							+ String.join(",", ConfigurationService.CONFIGNAMES)));
 		}
 
 		final Settings config = loadAsSettings(configname);
 
-		return new Tuple<String[], RestResponse>(new String[0], new BytesRestResponse(RestStatus.OK, convertToJson(config)));
-
+		return new Tuple<String[], RestResponse>(new String[0],
+				new BytesRestResponse(RestStatus.OK, convertToJson(config)));
 	}
 
 	private static XContentBuilder convertToJson(Settings settings) throws IOException {

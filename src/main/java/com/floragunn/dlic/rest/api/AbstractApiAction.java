@@ -35,6 +35,8 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.collect.Tuple;
+import org.elasticsearch.common.logging.ESLogger;
+import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.loader.JsonSettingsLoader;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -46,6 +48,7 @@ import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
+import org.elasticsearch.rest.RestRequest.Method;
 import org.elasticsearch.rest.RestResponse;
 import org.elasticsearch.rest.RestStatus;
 
@@ -55,254 +58,344 @@ import com.floragunn.searchguard.action.configupdate.ConfigUpdateResponse;
 import com.floragunn.searchguard.auditlog.AuditLog;
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.ConfigurationLoader;
+import com.floragunn.searchguard.configuration.ConfigurationService;
 import com.floragunn.searchguard.support.ConfigConstants;
 import com.floragunn.searchguard.user.User;
 
 public abstract class AbstractApiAction extends BaseRestHandler {
 
-    private final AdminDNs adminDNs;
-    private final ConfigurationLoader cl;
-    private final ClusterService cs;
-    private final AuditLog auditLog;
+	protected final ESLogger log = Loggers.getLogger(this.getClass());
+	
+	private final AdminDNs adminDNs;
+	private final ConfigurationLoader cl;
+	private final ClusterService cs;
+	private final AuditLog auditLog;
 
-    static {
-        printLicenseInfo();
-    }
+	static {
+		printLicenseInfo();
+	}
 
-    protected AbstractApiAction(final Settings settings, final RestController controller, final Client client, final AdminDNs adminDNs,
-            final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog) {
-        super(settings, controller, client);
-        this.adminDNs = adminDNs;
-        this.cl = cl;
-        this.cs = cs;
-        this.auditLog = auditLog;
-    }
+	protected AbstractApiAction(final Settings settings, final RestController controller, final Client client,
+			final AdminDNs adminDNs, final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog) {
+		super(settings, controller, client);
+		this.adminDNs = adminDNs;
+		this.cl = cl;
+		this.cs = cs;
+		this.auditLog = auditLog;
+	}
 
-    protected abstract Tuple<String[], RestResponse> handleApiRequest(final RestRequest request, final Client client) throws Throwable;
+	protected Tuple<String[], RestResponse> handleApiRequest(final RestRequest request, final Client client)
+			throws Throwable {
+		switch (request.method()) {
+		case DELETE:
+			return handleDelete(request, client);
+		case POST:
+			return handlePost(request, client);
+		case PUT:
+			return handlePut(request, client);
+		case GET:
+			return handleGet(request, client);
+		default:
+			throw new IllegalArgumentException(request.method() + " not supported");
+		}
+	}
 
-    protected final Settings.Builder load(final String config) {
-        return Settings.builder().put(loadAsSettings(config));
-    }
+	protected Tuple<String[], RestResponse> handleDelete(final RestRequest request, final Client client)
+			throws Throwable {
+		return notImplemented(Method.DELETE);
+	}
 
-    protected final Settings loadAsSettings(final String config) {    	
-        return cl.load(new String[] { config }).get(config);
-    }
-    
-    protected void save(final Client client, final RestRequest request, final String config, final Settings.Builder settings)
-            throws Throwable {
-        final Semaphore sem = new Semaphore(0);
-        final List<Throwable> exception = new ArrayList<Throwable>(1);
-        final IndexRequest ir = new IndexRequest("searchguard");
-        ir.putInContext(ConfigConstants.SG_USER, new User((String) request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL)));
+	protected Tuple<String[], RestResponse> handlePost(final RestRequest request, final Client client)
+			throws Throwable {
+		return notImplemented(Method.POST);
+	}
 
-        client.index(ir.type(config).id("0").refresh(true).consistencyLevel(WriteConsistencyLevel.DEFAULT).source(toSource(settings)),
-                new ActionListener<IndexResponse>() {
+	protected Tuple<String[], RestResponse> handlePut(final RestRequest request, final Client client) throws Throwable {
+		return notImplemented(Method.PUT);
+	}
 
-            @Override
-            public void onResponse(final IndexResponse response) {
-                sem.release();
-                if (logger.isDebugEnabled()) {
-                    logger.debug("{} successfully updated", config);
-                }
-            }
+	protected Tuple<String[], RestResponse> handleGet(final RestRequest request, final Client client) throws Throwable {
+		return notImplemented(Method.GET);
+	}
+	
+	protected final Settings.Builder load(final String config) {
+		return Settings.builder().put(loadAsSettings(config));
+	}
 
-            @Override
-            public void onFailure(final Throwable e) {
-                sem.release();
-                exception.add(e);
-                logger.error("Cannot update {} due to {}", e, config, e);
-            }
-        });
+	protected final Settings loadAsSettings(final String config) {
+		return cl.load(new String[] { config }).get(config);
+	}
 
-        if (!sem.tryAcquire(2, TimeUnit.MINUTES)) {
-            // timeout
-            logger.error("Cannot update {} due to timeout}", config);
-            throw new ElasticsearchException("Timeout updating " + config);
-        }
+	protected void save(final Client client, final RestRequest request, final String config,
+			final Settings.Builder settings) throws Throwable {
+		final Semaphore sem = new Semaphore(0);
+		final List<Throwable> exception = new ArrayList<Throwable>(1);
+		final IndexRequest ir = new IndexRequest("searchguard");
+		ir.putInContext(ConfigConstants.SG_USER,
+				new User((String) request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL)));
 
-        if (exception.size() > 0) {
-            throw exception.get(0);
-        }
+		client.index(ir.type(config).id("0").refresh(true).consistencyLevel(WriteConsistencyLevel.DEFAULT)
+				.source(toSource(settings)), new ActionListener<IndexResponse>() {
 
-    }
+					@Override
+					public void onResponse(final IndexResponse response) {
+						sem.release();
+						if (logger.isDebugEnabled()) {
+							logger.debug("{} successfully updated", config);
+						}
+					}
 
-    @Override
-    protected final void handleRequest(final RestRequest request, final RestChannel channel, final Client client) {
+					@Override
+					public void onFailure(final Throwable e) {
+						sem.release();
+						exception.add(e);
+						logger.error("Cannot update {} due to {}", e, config, e);
+					}
+				});
 
-        final X509Certificate[] certs = request.getFromContext(ConfigConstants.SG_SSL_PEER_CERTIFICATES);
+		if (!sem.tryAcquire(2, TimeUnit.MINUTES)) {
+			// timeout
+			logger.error("Cannot update {} due to timeout}", config);
+			throw new ElasticsearchException("Timeout updating " + config);
+		}
 
-        if (certs == null || certs.length == 0) {
-            logger.error("No certificate found");
-            // auditLog.logSgIndexAttempt(request, action); //TODO add method
-            // for rest request
-            final BytesRestResponse response = new BytesRestResponse(RestStatus.FORBIDDEN, "No certificates");
-            channel.sendResponse(response);
-            return;
-        }
+		if (exception.size() > 0) {
+			throw exception.get(0);
+		}
 
-        if (!adminDNs.isAdmin((String) request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL))) {
-            // auditLog.logSgIndexAttempt(request, action); //TODO add method
-            // for rest request
-            logger.error("SG admin permissions required but {} is not an admin", request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL));
-            final BytesRestResponse response = new BytesRestResponse(RestStatus.FORBIDDEN, "SG admin permissions required");
-            channel.sendResponse(response);
-            return;
-        }
+	}
 
-        final Semaphore sem = new Semaphore(0);
-        final List<Throwable> exception = new ArrayList<Throwable>(1);
-        final Tuple<String[], RestResponse> response;
-        try {
-            response = handleApiRequest(request, client);
+	@Override
+	protected final void handleRequest(final RestRequest request, final RestChannel channel, final Client client) {
 
-            if (response.v1().length > 0) {
+		final X509Certificate[] certs = request.getFromContext(ConfigConstants.SG_SSL_PEER_CERTIFICATES);
 
-                final ConfigUpdateRequest cur = new ConfigUpdateRequest(response.v1());
-                cur.putInContext(ConfigConstants.SG_USER, new User((String) request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL)));
+		if (certs == null || certs.length == 0) {
+			logger.error("No certificate found");
+			// auditLog.logSgIndexAttempt(request, action); //TODO add method
+			// for rest request
+			final BytesRestResponse response = new BytesRestResponse(RestStatus.FORBIDDEN, "No certificates");
+			channel.sendResponse(response);
+			return;
+		}
 
-                client.execute(ConfigUpdateAction.INSTANCE, cur, new ActionListener<ConfigUpdateResponse>() {
+		if (!adminDNs.isAdmin((String) request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL))) {
+			// auditLog.logSgIndexAttempt(request, action); //TODO add method
+			// for rest request
+			logger.error("SG admin permissions required but {} is not an admin",
+					request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL));
+			final BytesRestResponse response = new BytesRestResponse(RestStatus.FORBIDDEN,
+					"SG admin permissions required");
+			channel.sendResponse(response);
+			return;
+		}
 
-                    @Override
-                    public void onFailure(final Throwable e) {
-                        sem.release();
-                        logger.error("Cannot update {} due to {}", e, Arrays.toString(response.v1()), e);
-                        exception.add(e);
-                    }
+		final Semaphore sem = new Semaphore(0);
+		final List<Throwable> exception = new ArrayList<Throwable>(1);
+		final Tuple<String[], RestResponse> response;
+		try {
+			response = handleApiRequest(request, client);
 
-                    @Override
-                    public void onResponse(final ConfigUpdateResponse ur) {
-                        sem.release();
-                        if (!checkConfigUpdateResponse(ur)) {
-                            logger.error("Cannot update {}", Arrays.toString(response.v1()));
-                            exception.add(new ElasticsearchException("Unable to update " + Arrays.toString(response.v1())));
-                        } else if (logger.isDebugEnabled()) {
-                            logger.debug("Configs {} successfully updated", Arrays.toString(response.v1()));
-                        }
-                    }
-                });
+			if (response.v1().length > 0) {
 
-            } else {
-                sem.release();
-            }
+				final ConfigUpdateRequest cur = new ConfigUpdateRequest(response.v1());
+				cur.putInContext(ConfigConstants.SG_USER,
+						new User((String) request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL)));
 
-        } catch (final Throwable e) {
-            logger.error("Unexpected exception {}", e, e);
-            channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, e.toString()));
-            return;
-        }
+				client.execute(ConfigUpdateAction.INSTANCE, cur, new ActionListener<ConfigUpdateResponse>() {
 
-        try {
-            if (!sem.tryAcquire(2, TimeUnit.MINUTES)) {
-                // timeout
-                logger.error("Cannot update {} due to timeout", Arrays.toString(response.v1()));
-                throw new ElasticsearchException("Timeout updating " + Arrays.toString(response.v1()));
-            }
-        } catch (final InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+					@Override
+					public void onFailure(final Throwable e) {
+						sem.release();
+						logger.error("Cannot update {} due to {}", e, Arrays.toString(response.v1()), e);
+						exception.add(e);
+					}
 
-        if (exception.size() > 0) {
-            channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, exception.get(0).toString()));
-            return;
-        }
+					@Override
+					public void onResponse(final ConfigUpdateResponse ur) {
+						sem.release();
+						if (!checkConfigUpdateResponse(ur)) {
+							logger.error("Cannot update {}", Arrays.toString(response.v1()));
+							exception.add(
+									new ElasticsearchException("Unable to update " + Arrays.toString(response.v1())));
+						} else if (logger.isDebugEnabled()) {
+							logger.debug("Configs {} successfully updated", Arrays.toString(response.v1()));
+						}
+					}
+				});
 
-        channel.sendResponse(response.v2());
+			} else {
+				sem.release();
+			}
 
-    }
+		} catch (final Throwable e) {
+			logger.error("Unexpected exception {}", e, e);
+			channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, e.toString()));
+			return;
+		}
 
-    protected static XContentBuilder toSource(final Settings.Builder settingsBuilder) throws IOException {
-        return XContentFactory.jsonBuilder().map(settingsBuilder.build().getAsStructuredMap());
-    }
+		try {
+			if (!sem.tryAcquire(2, TimeUnit.MINUTES)) {
+				// timeout
+				logger.error("Cannot update {} due to timeout", Arrays.toString(response.v1()));
+				throw new ElasticsearchException("Timeout updating " + Arrays.toString(response.v1()));
+			}
+		} catch (final InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
 
-    protected boolean checkConfigUpdateResponse(final ConfigUpdateResponse response) {
+		if (exception.size() > 0) {
+			channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, exception.get(0).toString()));
+			return;
+		}
 
-        final int nodeCount = cs.state().getNodes().getNodes().size();
-        final int expectedConfigCount = 1;
+		channel.sendResponse(response.v2());
 
-        boolean success = response.getNodes().length == nodeCount;
-        if (!success) {
-            logger.error("Expected " + nodeCount + " nodes to return response, but got only " + response.getNodes().length);
-        }
+	}
 
-        for (final String nodeId : response.getNodesMap().keySet()) {
-            final ConfigUpdateResponse.Node node = response.getNodesMap().get(nodeId);
-            final boolean successNode = node.getUpdatedConfigTypes() != null && node.getUpdatedConfigTypes().length == expectedConfigCount;
+	protected static XContentBuilder toSource(final Settings.Builder settingsBuilder) throws IOException {
+		return XContentFactory.jsonBuilder().map(settingsBuilder.build().getAsStructuredMap());
+	}
 
-            if (!successNode) {
-                logger.error("Expected " + expectedConfigCount + " config types for node " + nodeId + " but got only "
-                        + Arrays.toString(node.getUpdatedConfigTypes()));
-            }
+	protected boolean checkConfigUpdateResponse(final ConfigUpdateResponse response) {
 
-            success = success & successNode;
-        }
+		final int nodeCount = cs.state().getNodes().getNodes().size();
+		final int expectedConfigCount = 1;
 
-        return success;
-    }
+		boolean success = response.getNodes().length == nodeCount;
+		if (!success) {
+			logger.error(
+					"Expected " + nodeCount + " nodes to return response, but got only " + response.getNodes().length);
+		}
 
-    protected static Settings toSettings(final BytesReference ref) {
-        if (ref == null || ref.length() == 0) {
-            throw new ElasticsearchException("ref invalid");
-        }
+		for (final String nodeId : response.getNodesMap().keySet()) {
+			final ConfigUpdateResponse.Node node = response.getNodesMap().get(nodeId);
+			final boolean successNode = node.getUpdatedConfigTypes() != null
+					&& node.getUpdatedConfigTypes().length == expectedConfigCount;
 
-        try {
-            return Settings.builder().put(new JsonSettingsLoader().load(XContentHelper.createParser(ref))).build();
-        } catch (final IOException e) {
-            throw ExceptionsHelper.convertToElastic(e);
-        }
-    }
+			if (!successNode) {
+				logger.error("Expected " + expectedConfigCount + " config types for node " + nodeId + " but got only "
+						+ Arrays.toString(node.getUpdatedConfigTypes()));
+			}
 
-    protected boolean removeKeysStartingWith(final Map<String, String> map, final String startWith) {
-        if (map == null || map.isEmpty() || startWith == null || startWith.isEmpty()) {
-            return false;
-        }
+			success = success & successNode;
+		}
 
-        boolean modified = false;
+		return success;
+	}
 
-        for (final String key : new HashSet<String>(map.keySet())) {
-            if (key != null && key.startsWith(startWith)) {
-                if (map.remove(key) != null) {
-                    modified = true;
-                }
-            }
-        }
+	protected static Settings toSettings(final BytesReference ref) {
+		if (ref == null || ref.length() == 0) {
+			throw new ElasticsearchException("ref invalid");
+		}
 
-        return modified;
-    }
+		try {
+			return Settings.builder().put(new JsonSettingsLoader().load(XContentHelper.createParser(ref))).build();
+		} catch (final IOException e) {
+			throw ExceptionsHelper.convertToElastic(e);
+		}
+	}
 
-    protected Map<String, String> prependValueToEachKey(final Map<String, String> map, final String prepend) {
-        if (map == null || map.isEmpty() || prepend == null || prepend.isEmpty()) {
-            return map;
-        }
+	protected static Settings.Builder toSettingsBuilder(final BytesReference ref) {
+		if (ref == null || ref.length() == 0) {
+			throw new ElasticsearchException("ref invalid");
+		}
 
-        final Map<String, String> copy = new HashMap<String, String>();
+		try {
+			return Settings.builder().put(new JsonSettingsLoader().load(XContentHelper.createParser(ref)));
+		} catch (final IOException e) {
+			throw ExceptionsHelper.convertToElastic(e);
+		}
+	}
+	
+	protected boolean removeKeysStartingWith(final Map<String, String> map, final String startWith) {
+		if (map == null || map.isEmpty() || startWith == null || startWith.isEmpty()) {
+			return false;
+		}
 
-        for (final String key : new HashSet<String>(map.keySet())) {
-            if (key != null) {
-                copy.put(prepend + key, map.get(key));
-            }
-        }
+		boolean modified = false;
 
-        return copy;
-    }
+		for (final String key : new HashSet<String>(map.keySet())) {
+			if (key != null && key.startsWith(startWith)) {
+				if (map.remove(key) != null) {
+					modified = true;
+				}
+			}
+		}
 
-    protected static String convertToYaml(BytesReference bytes, boolean prettyPrint) throws IOException {
-        try (XContentParser parser = XContentFactory.xContent(XContentFactory.xContentType(bytes)).createParser(bytes.streamInput())) {
-            parser.nextToken();
-            XContentBuilder builder = XContentFactory.yamlBuilder();
-            if (prettyPrint) {
-                builder.prettyPrint();
-            }
-            builder.copyCurrentStructure(parser);
-            return builder.string();
-        }
-    }
-    
-    public static void printLicenseInfo() {
-        System.out.println("***************************************************");
-        System.out.println("Searchguard Management API is not free software");
-        System.out.println("for commercial use in production.");
-        System.out.println("You have to obtain a license if you ");
-        System.out.println("use it in production.");
-        System.out.println("***************************************************");
-    }
+		return modified;
+	}
+
+	protected Map<String, String> prependValueToEachKey(final Map<String, String> map, final String prepend) {
+		if (map == null || map.isEmpty() || prepend == null || prepend.isEmpty()) {
+			return map;
+		}
+
+		final Map<String, String> copy = new HashMap<String, String>();
+
+		for (final String key : new HashSet<String>(map.keySet())) {
+			if (key != null) {
+				copy.put(prepend + key, map.get(key));
+			}
+		}
+
+		return copy;
+	}
+
+	protected static String convertToYaml(BytesReference bytes, boolean prettyPrint) throws IOException {
+		try (XContentParser parser = XContentFactory.xContent(XContentFactory.xContentType(bytes))
+				.createParser(bytes.streamInput())) {
+			parser.nextToken();
+			XContentBuilder builder = XContentFactory.yamlBuilder();
+			if (prettyPrint) {
+				builder.prettyPrint();
+			}
+			builder.copyCurrentStructure(parser);
+			return builder.string();
+		}
+	}
+
+	protected BytesRestResponse successResponse() {
+		
+		try {
+			final XContentBuilder builder = XContentFactory.jsonBuilder();
+			builder.startObject();
+			builder.field("status", "ok");
+			builder.endObject();
+			return new BytesRestResponse(RestStatus.OK, builder);
+		} catch (IOException ex) {
+			log.error("Cannot build error settings", ex);
+			return null;
+		}
+	}	
+	
+	protected BytesRestResponse errorResponse(RestStatus status, String message) {
+		
+		try {
+			final XContentBuilder builder = XContentFactory.jsonBuilder();
+			builder.startObject();
+			builder.field("status", "error");
+			builder.field("message", message);
+			builder.endObject();
+			return new BytesRestResponse(status, builder);
+		} catch (IOException ex) {
+			log.error("Cannot build error settings", ex);
+			return null;
+		}
+	}		
+
+	
+	protected Tuple<String[], RestResponse> notImplemented(Method method) {
+		return new Tuple<String[], RestResponse>(new String[0],
+				errorResponse(RestStatus.BAD_REQUEST, "Method " + method.name() + " not supported for this action."));	
+	}
+
+	public static void printLicenseInfo() {
+		System.out.println("***************************************************");
+		System.out.println("Searchguard Management API is not free software");
+		System.out.println("for commercial use in production.");
+		System.out.println("You have to obtain a license if you ");
+		System.out.println("use it in production.");
+		System.out.println("***************************************************");
+	}
 }

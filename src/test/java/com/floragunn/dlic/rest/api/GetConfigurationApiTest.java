@@ -17,40 +17,47 @@ public class GetConfigurationApiTest extends AbstractRestApiUnitTest {
 
 	
 	   	@Test
-	    public void testRestApi() throws Exception {
+	    public void testGetConfiguration() throws Exception {
 	   			        
-		   	final Settings settings = defaultNodeSettings(true);
-	        		   	
-	        log.debug("Starting nodes");        
-	        ClusterInfo clInfo = clusterHelper.startCluster(settings, ClusterConfiguration.SINGLENODE);
-	        log.debug("Started nodes");        
-	        
-	        log.debug("Setup index");        
-	        setupSearchGuardIndex(clInfo);
-	        log.debug("Setup done");
-	        
-	        RestHelper rh = new RestHelper(clInfo);
-	        		
-//	        // test with no cert, must fail
-//	        Assert.assertEquals(HttpStatus.SC_UNAUTHORIZED, rh.executeGetRequest("_searchguard/api/configuration/internalusers").getStatusCode());	        
-//	        Assert.assertEquals(HttpStatus.SC_FORBIDDEN, rh.executeGetRequest("_searchguard/api/configuration/internalusers", new BasicHeader("Authorization", "Basic "+encodeBasicHeader("admin", "admin"))).getStatusCode());
-//	        
-//	        // test with non-admin cert, must fail
-//	        rh.keystore = "node-0-keystore.jks";
-//	        rh.sendHTTPClientCertificate = true;
-//	        Assert.assertEquals(HttpStatus.SC_UNAUTHORIZED, rh.executeGetRequest("_searchguard/api/configuration/internalusers").getStatusCode());	        
-//	        Assert.assertEquals(HttpStatus.SC_FORBIDDEN, rh.executeGetRequest("_searchguard/api/configuration/internalusers", new BasicHeader("Authorization", "Basic "+encodeBasicHeader("admin", "admin"))).getStatusCode());
-	        
-	        // test with admin cert, basic auth
+	   		setup();
 	        rh.keystore = "kirk-keystore.jks";	       
 	        rh.sendHTTPClientCertificate = true;
-	        HttpResponse response = rh.executeGetRequest("_searchguard/api/configuration/internalusers"); 
+	        
+	        // wrong config name -> bad request
+	        HttpResponse response = rh.executeGetRequest("_searchguard/api/configuration/doesnotexists"); 
+	        Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+	        
+	        // test that every config is accessible
+	        // sg_config	     
+	        response = rh.executeGetRequest("_searchguard/api/configuration/config"); 
 	        Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+	        Settings settings = Settings.builder().loadFromSource(response.getBody()).build();
+	        Assert.assertEquals(settings.getAsBoolean("searchguard.dynamic.authc.authentication_domain_basic_internal.enabled", false), true);
+	        	        
+	        // internalusers
+	        response = rh.executeGetRequest("_searchguard/api/configuration/internalusers"); 
+	        Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());	        
+	        settings = Settings.builder().loadFromSource(response.getBody()).build();
+	        Assert.assertEquals(settings.get("admin.hash"), "$2a$12$VcCDgh2NDk07JGN0rjGbM.Ad41qVR/YFJcgHp0UGns5JDymv..TOG");
+	        Assert.assertEquals(settings.get("other.hash"), "someotherhash");
+
+	        // roles
+	        response = rh.executeGetRequest("_searchguard/api/configuration/roles"); 
+	        Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());	        
+	        settings = Settings.builder().loadFromSource(response.getBody()).build();
+	        Assert.assertEquals(settings.getAsArray("sg_all_access.cluster")[0], "cluster:*");
 	        
-	        //XContentBuilder builder = ContentHelper.parseJsonContent(response.getBody());
-	        Settings builder = Settings.builder().loadFromSource(response.getBody()).build();
-	        System.out.println(response.getBody());
-	        
+	        // roles
+	        response = rh.executeGetRequest("_searchguard/api/configuration/rolesmapping"); 
+	        Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());	        
+	        settings = Settings.builder().loadFromSource(response.getBody()).build();
+	        Assert.assertEquals(settings.getAsArray("sg_role_starfleet.backendroles")[0], "starfleet");
+
+	        // action groups
+	        response = rh.executeGetRequest("_searchguard/api/configuration/actiongroups"); 
+	        Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());	        
+	        settings = Settings.builder().loadFromSource(response.getBody()).build();
+	        Assert.assertEquals(settings.getAsArray("ALL")[0], "indices:*");
 	   }
 	    
 

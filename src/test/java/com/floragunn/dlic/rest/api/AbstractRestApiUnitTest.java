@@ -36,13 +36,35 @@ import com.floragunn.searchguard.ssl.SearchGuardSSLPlugin;
 import com.floragunn.searchguard.ssl.util.SSLConfigConstants;
 
 import test.AbstractSGUnitTest;
+import test.helper.cluster.ClusterConfiguration;
 import test.helper.cluster.ClusterHelper;
 import test.helper.cluster.ClusterInfo;
 import test.helper.file.FileHelper;
+import test.helper.rest.RestHelper;
 
 public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
-
-	protected void setupSearchGuardIndex(ClusterInfo cInfo) {
+	
+	protected void setup() throws Exception {
+		setup(ClusterConfiguration.SINGLENODE);
+	}
+	
+	protected void setup(ClusterConfiguration configuration) throws Exception {
+	   	final Settings nodeSettings = defaultNodeSettings(true);
+	   	
+        log.debug("Starting nodes");        
+        this.ci = ch.startCluster(nodeSettings, configuration);        
+        log.debug("Started nodes");        
+        
+        log.debug("Setup index");        
+        setupSearchGuardIndex();
+        log.debug("Setup done");
+        
+        RestHelper rh = new RestHelper(ci);
+        		
+        this.rh = rh;
+	}
+	
+	protected void setupSearchGuardIndex() {
 		Settings tcSettings = Settings.builder().put("cluster.name", ClusterHelper.clustername)
 				.put(defaultNodeSettings(false))
 				.put("searchguard.ssl.transport.keystore_filepath",
@@ -55,8 +77,8 @@ public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
 			log.debug("Start transport client to init");
 
 			tc.addTransportAddress(
-					new InetSocketTransportAddress(new InetSocketAddress(cInfo.nodeHost, cInfo.nodePort)));
-			Assert.assertEquals(cInfo.numNodes,
+					new InetSocketTransportAddress(new InetSocketAddress(ci.nodeHost, ci.nodePort)));
+			Assert.assertEquals(ci.numNodes,
 					tc.admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().length);
 
 			tc.admin().indices().create(new CreateIndexRequest("searchguard")).actionGet();
@@ -78,7 +100,7 @@ public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
 			ConfigUpdateResponse cur = tc
 					.execute(ConfigUpdateAction.INSTANCE, new ConfigUpdateRequest(ConfigurationService.CONFIGNAMES))
 					.actionGet();
-			Assert.assertEquals(cInfo.numNodes, cur.getNodes().length);
+			Assert.assertEquals(ci.numNodes, cur.getNodes().length);
 
 		}
 	}

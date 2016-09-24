@@ -39,6 +39,7 @@ sg_role_klingons2:
 sg_all_access:
   users:
     - nagilum
+    - barthelmus
     
 sg_public:
   users:

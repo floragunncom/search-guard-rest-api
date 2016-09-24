@@ -14,6 +14,8 @@
 
 package com.floragunn.dlic.rest.api;
 
+import java.util.Set;
+
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.common.collect.Tuple;
@@ -26,6 +28,7 @@ import org.elasticsearch.rest.RestRequest.Method;
 import org.elasticsearch.rest.RestResponse;
 import org.elasticsearch.rest.RestStatus;
 
+import com.floragunn.dlic.rest.validation.InternalUsersValidator;
 import com.floragunn.searchguard.auditlog.AuditLog;
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.ConfigurationLoader;
@@ -77,6 +80,11 @@ public class UserApiAction extends AbstractApiAction {
         }
 
         final Settings additionalSettings = toSettings(request.content());
+        
+        InternalUsersValidator validator = new InternalUsersValidator();
+        if (!validator.validateSettings(additionalSettings)) {
+        	return new Tuple<String[], RestResponse>(new String[0], new BytesRestResponse(RestStatus.BAD_REQUEST, validator.errorsAsXContent()));
+        }
         final Settings.Builder internaluser = load("internalusers");
         internaluser.put(prependValueToEachKey(additionalSettings.getAsMap(), username + "."));
         save(client, request, "internalusers", internaluser);

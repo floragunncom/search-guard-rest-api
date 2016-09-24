@@ -31,6 +31,8 @@ import org.junit.rules.TestWatcher;
 
 import io.netty.handler.ssl.OpenSsl;
 import test.helper.cluster.ClusterHelper;
+import test.helper.cluster.ClusterInfo;
+import test.helper.rest.RestHelper;
 import test.helper.rules.SGTestWatcher;
 
 public abstract class AbstractSGUnitTest {
@@ -47,8 +49,10 @@ public abstract class AbstractSGUnitTest {
 		System.out.println("Open SSL version: " + OpenSsl.versionString());
 	}
 	
-	protected ClusterHelper clusterHelper = new ClusterHelper();
-
+	protected ClusterHelper ch = new ClusterHelper();
+	protected RestHelper rh;
+	protected ClusterInfo ci;
+	
 	protected final ESLogger log = Loggers.getLogger(this.getClass());
 	
 	@Rule
@@ -59,7 +63,7 @@ public abstract class AbstractSGUnitTest {
 
 	@After
 	public void tearDown() throws Exception {
-		clusterHelper.stopCluster();
+		ch.stopCluster();
 	}
 
 	public static String encodeBasicHeader(final String username, final String password) {

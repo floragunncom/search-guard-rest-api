@@ -51,8 +51,6 @@ public abstract class AbstractSGUnitTest {
 
 	protected final ESLogger log = Loggers.getLogger(this.getClass());
 	
-	protected String clusterName = "searchguard_test_cluster";
-	
 	@Rule
 	public TestName name = new TestName();
 

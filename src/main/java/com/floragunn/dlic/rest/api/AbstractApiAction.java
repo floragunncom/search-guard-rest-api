@@ -40,6 +40,7 @@ import org.elasticsearch.common.settings.loader.JsonSettingsLoader;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentHelper;
+import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestChannel;
@@ -83,7 +84,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
         return Settings.builder().put(loadAsSettings(config));
     }
 
-    protected final Settings loadAsSettings(final String config) {
+    protected final Settings loadAsSettings(final String config) {    	
         return cl.load(new String[] { config }).get(config);
     }
     
@@ -284,6 +285,18 @@ public abstract class AbstractApiAction extends BaseRestHandler {
         return copy;
     }
 
+    protected static String convertToYaml(BytesReference bytes, boolean prettyPrint) throws IOException {
+        try (XContentParser parser = XContentFactory.xContent(XContentFactory.xContentType(bytes)).createParser(bytes.streamInput())) {
+            parser.nextToken();
+            XContentBuilder builder = XContentFactory.yamlBuilder();
+            if (prettyPrint) {
+                builder.prettyPrint();
+            }
+            builder.copyCurrentStructure(parser);
+            return builder.string();
+        }
+    }
+    
     public static void printLicenseInfo() {
         System.out.println("***************************************************");
         System.out.println("Searchguard Management API is not free software");

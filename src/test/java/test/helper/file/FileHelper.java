@@ -20,6 +20,7 @@ import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentType;
 
 import test.AbstractSGUnitTest;
+import test.helper.content.ContentHelper;
 
 public class FileHelper {
 
@@ -53,26 +54,13 @@ public class FileHelper {
 		return sw.toString();
 	}
 
-	public static BytesReference readYamlContent(final String file) {
+	public static XContentBuilder readYamlContent(final String file) {
 		try {
-			return readXContent(new StringReader(loadFile(file)), XContentType.YAML);
+			return ContentHelper.readXContent(new StringReader(loadFile(file)), XContentType.YAML);
 		} catch (IOException e) {
 			return null;
 		}
 	}
 
-	public static BytesReference readXContent(final Reader reader, final XContentType xContentType) throws IOException {
-		XContentParser parser = null;
-		try {
-			parser = XContentFactory.xContent(xContentType).createParser(reader);
-			parser.nextToken();
-			final XContentBuilder builder = XContentFactory.jsonBuilder();
-			builder.copyCurrentStructure(parser);
-			return builder.bytes();
-		} finally {
-			if (parser != null) {
-				parser.close();
-			}
-		}
-	}
+
 }

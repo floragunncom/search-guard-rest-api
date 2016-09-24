@@ -2,6 +2,7 @@ package test.helper.cluster;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 
 public enum ClusterConfiguration {
@@ -9,7 +10,7 @@ public enum ClusterConfiguration {
 	DEFAULT(new NodeSettings(true, false, false), new NodeSettings(true, true,false), new NodeSettings(false, true, false)),
 	SINGLENODE(new NodeSettings(true, true, false));
 	
-	private List<NodeSettings> nodeSettings;
+	private List<NodeSettings> nodeSettings = new LinkedList<>();
 	
 	private ClusterConfiguration(NodeSettings ... settings) {
 		nodeSettings.addAll(Arrays.asList(settings));

@@ -35,10 +35,10 @@ public class RestHelper {
 
 	protected final ESLogger log = Loggers.getLogger(RestHelper.class);
 	
-	public boolean enableHTTPClientSSL = false;
+	public boolean enableHTTPClientSSL = true;
 	public boolean enableHTTPClientSSLv3Only = false;
 	public boolean sendHTTPClientCertificate = false;
-	public boolean trustHTTPServerCertificate = false;
+	public boolean trustHTTPServerCertificate = true;
 	public String keystore = "kirk-keystore.jks";
 	public String truststore = "truststore.jks";
 	private ClusterInfo clusterInfo;
@@ -47,6 +47,11 @@ public class RestHelper {
 		this.clusterInfo = clusterInfo;
 	}
 	
+	public RestHelper(ClusterInfo clusterInfo, boolean enableHTTPClientSSL, boolean trustHTTPServerCertificate) {
+		this.clusterInfo = clusterInfo;
+		this.enableHTTPClientSSL = enableHTTPClientSSL;
+		this.trustHTTPServerCertificate = trustHTTPServerCertificate;
+	}
 	public String executeSimpleRequest(final String request) throws Exception {
 
 		CloseableHttpClient httpClient = null;

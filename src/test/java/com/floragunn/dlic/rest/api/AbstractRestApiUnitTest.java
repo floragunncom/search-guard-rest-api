@@ -18,7 +18,11 @@
 package com.floragunn.dlic.rest.api;
 
 import java.net.InetSocketAddress;
+import java.util.Optional;
 
+import org.apache.http.Header;
+import org.apache.http.HttpStatus;
+import org.apache.http.message.BasicHeader;
 import org.elasticsearch.action.admin.cluster.node.info.NodesInfoRequest;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.index.IndexRequest;
@@ -41,27 +45,108 @@ import test.helper.cluster.ClusterHelper;
 import test.helper.cluster.ClusterInfo;
 import test.helper.file.FileHelper;
 import test.helper.rest.RestHelper;
+import test.helper.rest.RestHelper.HttpResponse;
 
 public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
-	
+
 	protected void setup() throws Exception {
 		setup(ClusterConfiguration.SINGLENODE);
 	}
-	
+
 	protected void setup(ClusterConfiguration configuration) throws Exception {
-	   	final Settings nodeSettings = defaultNodeSettings(true);
-	   	
-        log.debug("Starting nodes");        
-        this.ci = ch.startCluster(nodeSettings, configuration);        
-        log.debug("Started nodes");        
-        
-        log.debug("Setup index");        
-        setupSearchGuardIndex();
-        log.debug("Setup done");
-        
-        RestHelper rh = new RestHelper(ci);
-        		
-        this.rh = rh;
+		final Settings nodeSettings = defaultNodeSettings(true);
+
+		log.debug("Starting nodes");
+		this.ci = ch.startCluster(nodeSettings, configuration);
+		log.debug("Started nodes");
+
+		log.debug("Setup index");
+		setupSearchGuardIndex();
+		log.debug("Setup done");
+
+		RestHelper rh = new RestHelper(ci);
+
+		this.rh = rh;
+	}
+
+	protected void deleteUser(String username) throws Exception {
+		boolean sendHTTPClientCertificate = rh.sendHTTPClientCertificate;
+		rh.sendHTTPClientCertificate = true;
+		HttpResponse response = rh.executeDeleteRequest("/_searchguard/api/user/" + username, new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		rh.sendHTTPClientCertificate = sendHTTPClientCertificate;
+	}
+
+	protected void addUserWithPassword(String username, String password) throws Exception {
+		boolean sendHTTPClientCertificate = rh.sendHTTPClientCertificate;
+		rh.sendHTTPClientCertificate = true;
+		HttpResponse response = rh.executePostRequest("/_searchguard/api/user/" + username,
+				"{password: \"" + password + "\"}", new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		rh.sendHTTPClientCertificate = sendHTTPClientCertificate;
+	}
+
+	protected void addUserWithPassword(String username, String password, String[] roles) throws Exception {
+		boolean sendHTTPClientCertificate = rh.sendHTTPClientCertificate;
+		rh.sendHTTPClientCertificate = true;
+		String payload = "{" + "password: \"" + password + "\"," + "roles: [";
+		for (int i = 0; i < roles.length; i++) {
+			payload += "\" " + roles[i] + " \"";
+			if (i + 1 < roles.length) {
+				payload += ",";
+			}
+		}
+		payload += "]}";
+		HttpResponse response = rh.executePostRequest("/_searchguard/api/user/" + username, payload, new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		rh.sendHTTPClientCertificate = sendHTTPClientCertificate;
+	}
+
+	protected void addUserWithHash(String username, String hash) throws Exception {
+		boolean sendHTTPClientCertificate = rh.sendHTTPClientCertificate;
+		rh.sendHTTPClientCertificate = true;
+		HttpResponse response = rh.executePostRequest("/_searchguard/api/user/" + username, "{hash: \"" + hash + "\"}",
+				new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		rh.sendHTTPClientCertificate = sendHTTPClientCertificate;
+	}
+
+	protected void checkGeneralAccess(int status, String username, String password) throws Exception {
+		boolean sendHTTPClientCertificate = rh.sendHTTPClientCertificate;
+		rh.sendHTTPClientCertificate = false;
+		Assert.assertEquals(status,
+				rh.executeGetRequest("",
+						new BasicHeader("Authorization", "Basic " + encodeBasicHeader(username, password)))
+						.getStatusCode());
+		rh.sendHTTPClientCertificate = sendHTTPClientCertificate;
+	}
+
+	protected String checkReadAccess(int status, String username, String password, String indexName,
+			String type, int id) throws Exception {
+		boolean sendHTTPClientCertificate = rh.sendHTTPClientCertificate;
+		rh.sendHTTPClientCertificate = false;
+		String action = indexName + "/" + type + "/"+id;
+		HttpResponse response = rh.executeGetRequest(action,
+				new BasicHeader("Authorization", "Basic " + encodeBasicHeader(username, password)));
+		int returnedStatus = response.getStatusCode();
+		Assert.assertEquals(status, returnedStatus);
+		rh.sendHTTPClientCertificate = sendHTTPClientCertificate;
+		return response.getBody();
+		
+	}
+
+	protected String checkWriteAccess(int status, String username, String password, String indexName,
+			String type, int id) throws Exception {
+		boolean sendHTTPClientCertificate = rh.sendHTTPClientCertificate;
+		rh.sendHTTPClientCertificate = false;
+		String action = indexName + "/" + type + "/" + id;
+		String payload = "{\"value\" : \"true\"}";
+		HttpResponse response = rh.executePutRequest(action, payload,
+				new BasicHeader("Authorization", "Basic " + encodeBasicHeader(username, password)));
+		int returnedStatus = response.getStatusCode();
+		Assert.assertEquals(status, returnedStatus);
+		rh.sendHTTPClientCertificate = sendHTTPClientCertificate;
+		return response.getBody();
 	}
 	
 	protected void setupSearchGuardIndex() {
@@ -76,8 +161,7 @@ public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
 
 			log.debug("Start transport client to init");
 
-			tc.addTransportAddress(
-					new InetSocketTransportAddress(new InetSocketAddress(ci.nodeHost, ci.nodePort)));
+			tc.addTransportAddress(new InetSocketTransportAddress(new InetSocketAddress(ci.nodeHost, ci.nodePort)));
 			Assert.assertEquals(ci.numNodes,
 					tc.admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().length);
 

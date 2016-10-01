@@ -8,6 +8,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.floragunn.dlic.rest.validation.AbstractConfigurationValidator;
+import com.floragunn.searchguard.configuration.ConfigurationService;
 
 import test.helper.rest.RestHelper.HttpResponse;
 
@@ -21,8 +22,8 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		rh.keystore = "kirk-keystore.jks";
 		rh.sendHTTPClientCertificate = true;
 
-		// initial configuration, two users
-		HttpResponse response = rh.executeGetRequest("_searchguard/api/configuration/internalusers");
+		// initial configuration, 2 users
+		HttpResponse response = rh.executeGetRequest("_searchguard/api/configuration/" + ConfigurationService.CONFIGNAME_INTERNAL_USERS);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		Settings settings = Settings.builder().loadFromSource(response.getBody()).build();
 		Assert.assertEquals(settings.getAsMap().size(), 2);
@@ -35,7 +36,7 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 
 		// add user with wrong JSON payload and check error message
-		response = rh.executePostRequest("/_searchguard/api/user/barthelmus", "{some: \"thing\", other: \"thing\"}",
+		response = rh.executePostRequest("/_searchguard/api/user/nagilum", "{some: \"thing\", other: \"thing\"}",
 				new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody()).build();
@@ -43,29 +44,18 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		Assert.assertTrue(settings.get(AbstractConfigurationValidator.INVALID_KEYS_KEY + ".keys").contains("some"));
 		Assert.assertTrue(settings.get(AbstractConfigurationValidator.INVALID_KEYS_KEY + ".keys").contains("other"));
 
-		// add user with correct setting. User has role "sg_all_access"
-		// password: barthelmus
-		// $2a$12$E01dU1e1vZ2cmzGwx9TkhOYrWnG4PeIf.q.PM1KXySqg9Z3n4BEw2
+		// add user with correct setting. User is in role "sg_all_access"
+		// password: nagilum
 
 		// check access not allowed
-		rh.sendHTTPClientCertificate = false;
-		Assert.assertEquals(HttpStatus.SC_UNAUTHORIZED,
-				rh.executeGetRequest("",
-						new BasicHeader("Authorization", "Basic " + encodeBasicHeader("barthelmus", "barthelmus")))
-						.getStatusCode());
+		checkGeneralAccess(HttpStatus.SC_UNAUTHORIZED, "nagilum", "nagilum");
 
 		// add users
 		rh.sendHTTPClientCertificate = true;
-		response = rh.executePostRequest("/_searchguard/api/user/barthelmus",
-				"{hash: \"$2a$12$E01dU1e1vZ2cmzGwx9TkhOYrWnG4PeIf.q.PM1KXySqg9Z3n4BEw2\"}", new Header[0]);
-		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		addUserWithHash("nagilum", "$2a$12$n5nubfWATfQjSYHiWtUyeOxMIxFInUHOAx8VMmGmxFNPGpaBmeB.m");
 
 		// access must be allowed now
-		rh.sendHTTPClientCertificate = false;
-		Assert.assertEquals(HttpStatus.SC_OK,
-				rh.executeGetRequest("",
-						new BasicHeader("Authorization", "Basic " + encodeBasicHeader("barthelmus", "barthelmus")))
-						.getStatusCode());
+		checkGeneralAccess(HttpStatus.SC_OK, "nagilum", "nagilum");
 
 		// try remove user, no username
 		rh.sendHTTPClientCertificate = true;
@@ -75,31 +65,60 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		response = rh.executeDeleteRequest("/_searchguard/api/user/", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 
+		// try remove user, nonexisting user
+		response = rh.executeDeleteRequest("/_searchguard/api/user/picard", new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatusCode());
+		
 		// now really remove user
-		response = rh.executeDeleteRequest("/_searchguard/api/user/barthelmus", new Header[0]);
-		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		deleteUser("nagilum");
 
 		// Access must be forbidden now
 		rh.sendHTTPClientCertificate = false;
-		response = rh.executeGetRequest("",
-				new BasicHeader("Authorization", "Basic " + encodeBasicHeader("barthelmus", "barthelmus")));
-		Assert.assertEquals(HttpStatus.SC_UNAUTHORIZED, response.getStatusCode());
+		checkGeneralAccess(HttpStatus.SC_UNAUTHORIZED, "nagilum", "nagilum");
 
 		// use password instead of hash
 		rh.sendHTTPClientCertificate = true;
-		response = rh.executePostRequest("/_searchguard/api/user/barthelmus", "{password: \"correctpassword\"}",
-				new Header[0]);
-		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		addUserWithPassword("nagilum", "correctpassword");
 
 		rh.sendHTTPClientCertificate = false;
-
-		response = rh.executeGetRequest("",
-				new BasicHeader("Authorization", "Basic " + encodeBasicHeader("barthelmus", "wrongpassword")));
-		Assert.assertEquals(HttpStatus.SC_UNAUTHORIZED, response.getStatusCode());
+		checkGeneralAccess(HttpStatus.SC_UNAUTHORIZED, "nagilum", "wrongpassword");
+		checkGeneralAccess(HttpStatus.SC_OK, "nagilum", "correctpassword");
 		
-		response = rh.executeGetRequest("",
-				new BasicHeader("Authorization", "Basic " + encodeBasicHeader("barthelmus", "correctpassword")));
-		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		deleteUser("nagilum");
+		
+		// ROLES
+		
+		// create index first
+		
+		rh.sendHTTPClientCertificate = true;
+		rh.executePutRequest("sf", null, new Header[0]);
+		rh.executePutRequest("sf/ships/0", "{\"number\" : \"NCC-1701-D\"}", new Header[0]);
+		rh.executePutRequest("sf/public/0", "{\"some\" : \"value\"}", new Header[0]);
+		rh.sendHTTPClientCertificate = false;
+		
+		// use backendroles when creating user. User picard does not exist in the internal user DB
+		// and is also not assigned to any role by username
+		addUserWithPassword("picard", "picard");
+		checkGeneralAccess(HttpStatus.SC_OK, "picard", "picard");
+
+		// check read access to starfleet index and ships type, must fail 
+		checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships",0);
+		        
+		// overwrite user picard, and give him role "starfleet". 
+		addUserWithPassword("picard", "picard", new String[] {"starfleet"});
+		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships",0);
+		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public",0);
+		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships",1);
+		checkWriteAccess(HttpStatus.SC_CREATED, "picard", "picard", "sf", "public",1);
+		
+		// overwrite user picard, and give him role "starfleet" plus "captains 
+		addUserWithPassword("picard", "picard", new String[] {"starfleet", "captains"});
+		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships",0);
+		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public",0);
+		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public",1);
+		checkWriteAccess(HttpStatus.SC_CREATED, "picard", "picard", "sf", "ships",1);
+		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public",1);
+		
 	}
 
 }

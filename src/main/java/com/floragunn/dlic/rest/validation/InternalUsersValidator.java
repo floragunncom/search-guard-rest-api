@@ -1,5 +1,8 @@
 package com.floragunn.dlic.rest.validation;
 
+import org.elasticsearch.common.bytes.BytesReference;
+import org.elasticsearch.rest.RestRequest.Method;
+
 public class InternalUsersValidator extends AbstractConfigurationValidator {
 	
 	static {
@@ -10,7 +13,8 @@ public class InternalUsersValidator extends AbstractConfigurationValidator {
 		mandatoryOrKeys.add("password");
 	}
 		
-
-	
+	public InternalUsersValidator(final Method method, BytesReference ref) {
+		super(method, ref);
+	}	
 	
 }

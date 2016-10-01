@@ -2,7 +2,6 @@ package com.floragunn.dlic.rest.api;
 
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
-import org.apache.http.message.BasicHeader;
 import org.elasticsearch.common.settings.Settings;
 import org.junit.Assert;
 import org.junit.Test;
@@ -23,20 +22,21 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		rh.sendHTTPClientCertificate = true;
 
 		// initial configuration, 2 users
-		HttpResponse response = rh.executeGetRequest("_searchguard/api/configuration/" + ConfigurationService.CONFIGNAME_INTERNAL_USERS);
+		HttpResponse response = rh
+				.executeGetRequest("_searchguard/api/configuration/" + ConfigurationService.CONFIGNAME_INTERNAL_USERS);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		Settings settings = Settings.builder().loadFromSource(response.getBody()).build();
 		Assert.assertEquals(settings.getAsMap().size(), 2);
 
 		// no username given
-		response = rh.executePostRequest("/_searchguard/api/user/", "{hash: \"123\"}", new Header[0]);
+		response = rh.executePutRequest("/_searchguard/api/user/", "{hash: \"123\"}", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 
-		response = rh.executePostRequest("/_searchguard/api/user", "{hash: \"123\"}", new Header[0]);
+		response = rh.executePutRequest("/_searchguard/api/user", "{hash: \"123\"}", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 
 		// add user with wrong JSON payload and check error message
-		response = rh.executePostRequest("/_searchguard/api/user/nagilum", "{some: \"thing\", other: \"thing\"}",
+		response = rh.executePutRequest("/_searchguard/api/user/nagilum", "{some: \"thing\", other: \"thing\"}",
 				new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody()).build();
@@ -52,7 +52,8 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 
 		// add users
 		rh.sendHTTPClientCertificate = true;
-		addUserWithHash("nagilum", "$2a$12$n5nubfWATfQjSYHiWtUyeOxMIxFInUHOAx8VMmGmxFNPGpaBmeB.m");
+		addUserWithHash("nagilum", "$2a$12$n5nubfWATfQjSYHiWtUyeOxMIxFInUHOAx8VMmGmxFNPGpaBmeB.m",
+				HttpStatus.SC_CREATED);
 
 		// access must be allowed now
 		checkGeneralAccess(HttpStatus.SC_OK, "nagilum", "nagilum");
@@ -68,7 +69,7 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		// try remove user, nonexisting user
 		response = rh.executeDeleteRequest("/_searchguard/api/user/picard", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatusCode());
-		
+
 		// now really remove user
 		deleteUser("nagilum");
 
@@ -78,47 +79,48 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 
 		// use password instead of hash
 		rh.sendHTTPClientCertificate = true;
-		addUserWithPassword("nagilum", "correctpassword");
+		addUserWithPassword("nagilum", "correctpassword", HttpStatus.SC_CREATED);
 
 		rh.sendHTTPClientCertificate = false;
 		checkGeneralAccess(HttpStatus.SC_UNAUTHORIZED, "nagilum", "wrongpassword");
 		checkGeneralAccess(HttpStatus.SC_OK, "nagilum", "correctpassword");
-		
+
 		deleteUser("nagilum");
-		
+
 		// ROLES
-		
+
 		// create index first
-		
+
 		rh.sendHTTPClientCertificate = true;
 		rh.executePutRequest("sf", null, new Header[0]);
 		rh.executePutRequest("sf/ships/0", "{\"number\" : \"NCC-1701-D\"}", new Header[0]);
 		rh.executePutRequest("sf/public/0", "{\"some\" : \"value\"}", new Header[0]);
 		rh.sendHTTPClientCertificate = false;
-		
-		// use backendroles when creating user. User picard does not exist in the internal user DB
+
+		// use backendroles when creating user. User picard does not exist in
+		// the internal user DB
 		// and is also not assigned to any role by username
-		addUserWithPassword("picard", "picard");
+		addUserWithPassword("picard", "picard", HttpStatus.SC_CREATED);
 		checkGeneralAccess(HttpStatus.SC_OK, "picard", "picard");
 
-		// check read access to starfleet index and ships type, must fail 
-		checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships",0);
-		        
-		// overwrite user picard, and give him role "starfleet". 
-		addUserWithPassword("picard", "picard", new String[] {"starfleet"});
-		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships",0);
-		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public",0);
-		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships",1);
-		checkWriteAccess(HttpStatus.SC_CREATED, "picard", "picard", "sf", "public",1);
-		
-		// overwrite user picard, and give him role "starfleet" plus "captains 
-		addUserWithPassword("picard", "picard", new String[] {"starfleet", "captains"});
-		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships",0);
-		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public",0);
-		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public",1);
-		checkWriteAccess(HttpStatus.SC_CREATED, "picard", "picard", "sf", "ships",1);
-		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public",1);
-		
+		// check read access to starfleet index and ships type, must fail
+		checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 0);
+
+		// overwrite user picard, and give him role "starfleet".
+		addUserWithPassword("picard", "picard", new String[] { "starfleet" }, HttpStatus.SC_OK);
+		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
+		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
+		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 1);
+		checkWriteAccess(HttpStatus.SC_CREATED, "picard", "picard", "sf", "public", 1);
+
+		// overwrite user picard, and give him role "starfleet" plus "captains
+		addUserWithPassword("picard", "picard", new String[] { "starfleet", "captains" }, HttpStatus.SC_OK);
+		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
+		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
+		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 1);
+		checkWriteAccess(HttpStatus.SC_CREATED, "picard", "picard", "sf", "ships", 1);
+		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 1);
+
 	}
 
 }

@@ -6,6 +6,7 @@ public class SearchGuardRestApiActions {
 
 	public static void addActions(final RestModule module) {
 		module.addRestAction(UserApiAction.class);
+		module.addRestAction(RolesMappingApiAction.class);
 		module.addRestAction(GetConfigurationApiAction.class);
 	}
 }

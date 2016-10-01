@@ -14,7 +14,7 @@
 
   <groupId>com.floragunn</groupId>
   <artifactId>dlic-search-guard-rest-api</artifactId>
-  <version>2.3.5.6.1-SNAPSHOT</version>
+  <version>2.4-1-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>Search Guard</name>
@@ -33,13 +33,13 @@
     </repository>
   </distributionManagement>
 
-  <properties>
-    <sg2.version>2.3.5.6-RESTAPI</sg2.version>
-    <sgssl.version>2.3.5.16</sgssl.version>
-    <elasticsearch.version>2.3.5</elasticsearch.version>
-    <lucene.version>5.5.0</lucene.version>
-    <dependency.locations.enabled>false</dependency.locations.enabled>
-  </properties>
+ <properties>
+      <sg2.version>2.4.0.7-SNAPSHOT</sg2.version>
+      <sgssl.version>2.4.0.16</sgssl.version>
+      <elasticsearch.version>2.4.0</elasticsearch.version>
+      <lucene.version>5.5.0</lucene.version>
+      <dependency.locations.enabled>false</dependency.locations.enabled>
+    </properties>
 
   <scm>
     <url>https://github.com/floragunncom/search-guard-rest-api.git</url>

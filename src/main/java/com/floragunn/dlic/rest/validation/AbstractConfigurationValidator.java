@@ -5,11 +5,18 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.elasticsearch.ExceptionsHelper;
+import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.settings.loader.JsonSettingsLoader;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.common.xcontent.XContentHelper;
+import org.elasticsearch.rest.RestRequest.Method;
+
+import com.google.common.base.Joiner;
 
 public abstract class AbstractConfigurationValidator {
 
@@ -40,9 +47,23 @@ public abstract class AbstractConfigurationValidator {
 	protected final Set<String> invalidKeys = new HashSet<>();
 
 	protected final Set<String> missingMandatoryOrKeys = new HashSet<>();
-		
-	public boolean validateSettings(Settings settings) {
-		Set<String> requested = settings.names();
+	
+	private Settings.Builder settingsBuilder;
+	
+	private Method method;
+	
+	public AbstractConfigurationValidator(final Method method, final BytesReference ref) {
+		this.settingsBuilder = toSettingsBuilder(ref);
+		this.method = method;
+		validateSettings();
+	}
+	
+	private boolean validateSettings() {
+		Set<String> requested = settingsBuilder.build().names();
+		// no additional settings provided, nothing to validate
+		if(requested.size() == 0) {
+			return true;
+		}
 		// mandatory settings, one of
 		if(Collections.disjoint(requested, mandatoryOrKeys)) {
 			this.missingMandatoryOrKeys.addAll(mandatoryOrKeys);
@@ -74,6 +95,10 @@ public abstract class AbstractConfigurationValidator {
 		}
 	}
 
+	public Settings.Builder settingsBuilder() {
+		return settingsBuilder;
+	}
+	
 	public boolean isValid() {
 		return missingMandatoryKeys.isEmpty() && invalidKeys.isEmpty() && missingMandatoryKeys.isEmpty();
 	}
@@ -82,8 +107,20 @@ public abstract class AbstractConfigurationValidator {
 			throws IOException {
 		if (!keys.isEmpty()) {
 			builder.startObject(message);
-			builder.field("keys", String.join(",", keys.toArray(new String[0])));
+			builder.field("keys", Joiner.on(",").join(keys.toArray(new String[0])));
 			builder.endObject();
+		}
+	}
+
+	private Settings.Builder toSettingsBuilder(final BytesReference ref) {
+		if (ref == null || ref.length() == 0) {
+			return Settings.builder();
+		}
+
+		try {
+			return Settings.builder().put(new JsonSettingsLoader().load(XContentHelper.createParser(ref)));
+		} catch (final IOException e) {
+			throw ExceptionsHelper.convertToElastic(e);
 		}
 	}
 }

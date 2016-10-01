@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ExceptionsHelper;
@@ -35,8 +36,6 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.collect.Tuple;
-import org.elasticsearch.common.logging.ESLogger;
-import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.loader.JsonSettingsLoader;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -52,20 +51,18 @@ import org.elasticsearch.rest.RestRequest.Method;
 import org.elasticsearch.rest.RestResponse;
 import org.elasticsearch.rest.RestStatus;
 
+import com.floragunn.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateAction;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateRequest;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateResponse;
 import com.floragunn.searchguard.auditlog.AuditLog;
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.ConfigurationLoader;
-import com.floragunn.searchguard.configuration.ConfigurationService;
 import com.floragunn.searchguard.support.ConfigConstants;
 import com.floragunn.searchguard.user.User;
 
 public abstract class AbstractApiAction extends BaseRestHandler {
 
-	protected final ESLogger log = Loggers.getLogger(this.getClass());
-	
 	private final AdminDNs adminDNs;
 	private final ConfigurationLoader cl;
 	private final ClusterService cs;
@@ -84,46 +81,64 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		this.auditLog = auditLog;
 	}
 
+	protected abstract AbstractConfigurationValidator getValidator(final Method method, BytesReference ref);
+
 	protected Tuple<String[], RestResponse> handleApiRequest(final RestRequest request, final Client client)
 			throws Throwable {
+
+		// validate additional settings, if any
+		AbstractConfigurationValidator validator = getValidator(request.method(), request.content());
+		if (!validator.isValid()) {
+			return new Tuple<String[], RestResponse>(new String[0],
+					new BytesRestResponse(RestStatus.BAD_REQUEST, validator.errorsAsXContent()));
+		}
 		switch (request.method()) {
 		case DELETE:
-			return handleDelete(request, client);
+			return handleDelete(request, client, validator.settingsBuilder());
 		case POST:
-			return handlePost(request, client);
+			return handlePost(request, client, validator.settingsBuilder());
 		case PUT:
-			return handlePut(request, client);
+			return handlePut(request, client, validator.settingsBuilder());
 		case GET:
-			return handleGet(request, client);
+			return handleGet(request, client, validator.settingsBuilder());
 		default:
 			throw new IllegalArgumentException(request.method() + " not supported");
 		}
 	}
 
-	protected Tuple<String[], RestResponse> handleDelete(final RestRequest request, final Client client)
-			throws Throwable {
+	protected Tuple<String[], RestResponse> handleDelete(final RestRequest request, final Client client,
+			final Settings.Builder additionalSettings) throws Throwable {
 		return notImplemented(Method.DELETE);
 	}
 
-	protected Tuple<String[], RestResponse> handlePost(final RestRequest request, final Client client)
-			throws Throwable {
+	protected Tuple<String[], RestResponse> handlePost(final RestRequest request, final Client client,
+			final Settings.Builder additionalSettings) throws Throwable {
 		return notImplemented(Method.POST);
 	}
 
-	protected Tuple<String[], RestResponse> handlePut(final RestRequest request, final Client client) throws Throwable {
+	protected Tuple<String[], RestResponse> handlePut(final RestRequest request, final Client client,
+			final Settings.Builder additionalSettings) throws Throwable {
 		return notImplemented(Method.PUT);
 	}
 
-	protected Tuple<String[], RestResponse> handleGet(final RestRequest request, final Client client) throws Throwable {
+	protected Tuple<String[], RestResponse> handleGet(final RestRequest request, final Client client,
+			final Settings.Builder additionalSettings) throws Throwable {
 		return notImplemented(Method.GET);
 	}
-	
+
 	protected final Settings.Builder load(final String config) {
 		return Settings.builder().put(loadAsSettings(config));
 	}
 
 	protected final Settings loadAsSettings(final String config) {
-		return cl.load(new String[] { config }).get(config);
+		try {
+			return cl.load(new String[] { config }, 30, TimeUnit.SECONDS).get(config);
+		} catch (InterruptedException e) {
+			logger.error("Unable to retrieve configuration due to a thread interruption");
+		} catch (TimeoutException e) {
+			logger.error("Unable to retrieve configuration due to a timeout {}", e, e.toString());
+		}
+		return null;
 	}
 
 	protected void save(final Client client, final RestRequest request, final String config,
@@ -307,7 +322,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			throw ExceptionsHelper.convertToElastic(e);
 		}
 	}
-	
+
 	protected boolean removeKeysStartingWith(final Map<String, String> map, final String startWith) {
 		if (map == null || map.isEmpty() || startWith == null || startWith.isEmpty()) {
 			return false;
@@ -355,39 +370,41 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		}
 	}
 
-	protected BytesRestResponse successResponse() {
-		
+	protected Tuple<String[], RestResponse> response(RestStatus status, String statusString, String message,
+			String... configs) {
+
 		try {
 			final XContentBuilder builder = XContentFactory.jsonBuilder();
 			builder.startObject();
-			builder.field("status", "ok");
-			builder.endObject();
-			return new BytesRestResponse(RestStatus.OK, builder);
-		} catch (IOException ex) {
-			log.error("Cannot build error settings", ex);
-			return null;
-		}
-	}	
-	
-	protected BytesRestResponse errorResponse(RestStatus status, String message) {
-		
-		try {
-			final XContentBuilder builder = XContentFactory.jsonBuilder();
-			builder.startObject();
-			builder.field("status", "error");
+			builder.field("status", statusString);
 			builder.field("message", message);
 			builder.endObject();
-			return new BytesRestResponse(status, builder);
+			String[] configsToUpdate = configs == null ? new String[0] : configs;
+			return new Tuple<String[], RestResponse>(configsToUpdate, new BytesRestResponse(status, builder));
 		} catch (IOException ex) {
-			log.error("Cannot build error settings", ex);
+			logger.error("Cannot build response", ex);
 			return null;
 		}
-	}		
+	}
 
-	
+	protected Tuple<String[], RestResponse> successResponse(String message, String... configs) {
+		return response(RestStatus.OK, RestStatus.OK.name(), message, configs);
+	}
+
+	protected Tuple<String[], RestResponse> createdResponse(String message, String... configs) {
+		return response(RestStatus.CREATED, RestStatus.CREATED.name(), message, configs);
+	}
+
+	protected Tuple<String[], RestResponse> badRequestResponse(String message) {
+		return response(RestStatus.BAD_REQUEST, RestStatus.BAD_REQUEST.name(), message);
+	}
+
+	protected Tuple<String[], RestResponse> notFound(String message) {
+		return response(RestStatus.NOT_FOUND, RestStatus.NOT_FOUND.name(), message);
+	}
+
 	protected Tuple<String[], RestResponse> notImplemented(Method method) {
-		return new Tuple<String[], RestResponse>(new String[0],
-				errorResponse(RestStatus.BAD_REQUEST, "Method " + method.name() + " not supported for this action."));	
+		return badRequestResponse("Method " + method.name() + " not supported for this action.");
 	}
 
 	public static void printLicenseInfo() {

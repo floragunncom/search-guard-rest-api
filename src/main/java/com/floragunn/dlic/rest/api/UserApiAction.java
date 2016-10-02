@@ -43,6 +43,8 @@ public class UserApiAction extends AbstractApiAction {
 	public UserApiAction(final Settings settings, final RestController controller, final Client client,
 			final AdminDNs adminDNs, final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog) {
 		super(settings, controller, client, adminDNs, cl, cs, auditLog);
+		controller.registerHandler(Method.GET, "/_searchguard/api/user/{name}", this);
+		controller.registerHandler(Method.GET, "/_searchguard/api/user/", this);
 		controller.registerHandler(Method.DELETE, "/_searchguard/api/user/{name}", this);
 		controller.registerHandler(Method.PUT, "/_searchguard/api/user/{name}", this);
 	}
@@ -53,7 +55,7 @@ public class UserApiAction extends AbstractApiAction {
 		final String username = request.param("name");
 
 		if (username == null || username.length() == 0) {
-			return badRequestResponse("No name given");
+			return badRequestResponse("No username given");
 		}
 
 		final Settings.Builder internaluser = load(ConfigurationService.CONFIGNAME_INTERNAL_USERS);
@@ -103,6 +105,16 @@ public class UserApiAction extends AbstractApiAction {
 
 	public static String hash(final byte[] clearTextPassword) {
 		return BCrypt.hashpw(Objects.requireNonNull(clearTextPassword), BCrypt.gensalt(12));
+	}
+
+	@Override
+	protected String getResourceName() {
+		return "user";
+	}
+
+	@Override
+	protected String getConfigName() {
+		return ConfigurationService.CONFIGNAME_INTERNAL_USERS;
 	}
 
 	@Override

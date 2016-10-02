@@ -37,7 +37,9 @@ import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.common.settings.loader.JsonSettingsLoader;
+import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentHelper;
@@ -83,12 +85,16 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 	protected abstract AbstractConfigurationValidator getValidator(final Method method, BytesReference ref);
 
+	protected abstract String getResourceName();
+
+	protected abstract String getConfigName();
+
 	protected Tuple<String[], RestResponse> handleApiRequest(final RestRequest request, final Client client)
 			throws Throwable {
 
 		// validate additional settings, if any
 		AbstractConfigurationValidator validator = getValidator(request.method(), request.content());
-		if (!validator.isValid()) {
+		if (!validator.validateSettings()) {
 			return new Tuple<String[], RestResponse>(new String[0],
 					new BytesRestResponse(RestStatus.BAD_REQUEST, validator.errorsAsXContent()));
 		}
@@ -121,9 +127,26 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		return notImplemented(Method.PUT);
 	}
 
-	protected Tuple<String[], RestResponse> handleGet(final RestRequest request, final Client client,
-			final Settings.Builder additionalSettings) throws Throwable {
-		return notImplemented(Method.GET);
+	protected Tuple<String[], RestResponse> handleGet(RestRequest request, Client client, Builder additionalSettings)
+			throws Throwable {
+
+		final String resourcename = request.param("name");
+
+		if (resourcename == null || resourcename.length() == 0) {
+			return badRequestResponse("No " + getResourceName() + " specified.");
+		}
+
+		final Settings.Builder configuration = load(getConfigName());
+
+		final Settings.Builder requestedConfiguration = copyKeysStartingWith(configuration.internalMap(),
+				resourcename + ".");
+
+		if (requestedConfiguration.internalMap().size() == 0) {
+			return notFound("Resource '" + resourcename + "' not found.");
+		}
+
+		return new Tuple<String[], RestResponse>(new String[0],
+				new BytesRestResponse(RestStatus.OK, convertToJson(requestedConfiguration.build())));
 	}
 
 	protected final Settings.Builder load(final String config) {
@@ -323,6 +346,20 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		}
 	}
 
+	protected Settings.Builder copyKeysStartingWith(final Map<String, String> map, final String startWith) {
+		if (map == null || map.isEmpty() || startWith == null || startWith.isEmpty()) {
+			return Settings.builder();
+		}
+
+		Map<String, String> copiedValues = new HashMap<>();
+		for (final String key : new HashSet<String>(map.keySet())) {
+			if (key != null && key.startsWith(startWith)) {
+				copiedValues.put(key, map.get(key));
+			}
+		}
+		return Settings.builder().put(copiedValues);
+	}
+
 	protected boolean removeKeysStartingWith(final Map<String, String> map, final String startWith) {
 		if (map == null || map.isEmpty() || startWith == null || startWith.isEmpty()) {
 			return false;
@@ -368,6 +405,15 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			builder.copyCurrentStructure(parser);
 			return builder.string();
 		}
+	}
+
+	protected static XContentBuilder convertToJson(Settings settings) throws IOException {
+		XContentBuilder builder = XContentFactory.jsonBuilder();
+		builder.prettyPrint();
+		builder.startObject();
+		settings.toXContent(builder, ToXContent.EMPTY_PARAMS);
+		builder.endObject();
+		return builder;
 	}
 
 	protected Tuple<String[], RestResponse> response(RestStatus status, String statusString, String message,

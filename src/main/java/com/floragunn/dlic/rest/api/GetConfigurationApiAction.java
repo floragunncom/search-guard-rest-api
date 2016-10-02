@@ -1,6 +1,5 @@
 package com.floragunn.dlic.rest.api;
 
-import java.io.IOException;
 import java.util.Arrays;
 
 import org.elasticsearch.client.Client;
@@ -9,9 +8,6 @@ import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.xcontent.ToXContent;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
@@ -34,7 +30,6 @@ public class GetConfigurationApiAction extends AbstractApiAction {
 			final AdminDNs adminDNs, final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog) {
 		super(settings, controller, client, adminDNs, cl, cs, auditLog);
 		controller.registerHandler(Method.GET, "/_searchguard/api/configuration/{configname}", this);
-		logger.info("Registered ConfigurationApiAction");
 	}
 
 	@Override
@@ -55,17 +50,20 @@ public class GetConfigurationApiAction extends AbstractApiAction {
 				new BytesRestResponse(RestStatus.OK, convertToJson(config)));
 	}
 
-	private static XContentBuilder convertToJson(Settings settings) throws IOException {
-		XContentBuilder builder = XContentFactory.jsonBuilder();
-		builder.prettyPrint();
-		builder.startObject();
-		settings.toXContent(builder, ToXContent.EMPTY_PARAMS);
-		builder.endObject();
-		return builder;
-	}
-
 	@Override
 	protected AbstractConfigurationValidator getValidator(Method method, BytesReference ref) {
 		return new NoOpValidator(method, ref);
+	}
+
+	@Override
+	protected String getResourceName() {
+		// GET is handled by this class directly
+		return null;
+	}
+
+	@Override
+	protected String getConfigName() {
+		// GET is handled by this class directly
+		return null;
 	}
 }

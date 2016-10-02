@@ -24,9 +24,10 @@ public class RolesMappingApiAction extends AbstractApiAction {
 	public RolesMappingApiAction(final Settings settings, final RestController controller, final Client client,
 			final AdminDNs adminDNs, final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog) {
 		super(settings, controller, client, adminDNs, cl, cs, auditLog);
-		controller.registerHandler(Method.DELETE, "/_searchguard/api/role/{name}", this);
-		controller.registerHandler(Method.POST, "/_searchguard/api/role/{name}", this);
-		controller.registerHandler(Method.PUT, "/_searchguard/api/role/{name}", this);
+		controller.registerHandler(Method.GET, "/_searchguard/api/rolesmapping/", this);
+		controller.registerHandler(Method.GET, "/_searchguard/api/rolesmapping/{name}", this);
+		controller.registerHandler(Method.DELETE, "/_searchguard/api/rolesmapping/{name}", this);
+		controller.registerHandler(Method.PUT, "/_searchguard/api/rolesmapping/{name}", this);
 	}
 
 	@Override
@@ -52,20 +53,40 @@ public class RolesMappingApiAction extends AbstractApiAction {
 	}
 
 	@Override
-	protected Tuple<String[], RestResponse> handlePost(final RestRequest request, final Client client,
-			final Settings.Builder additionalSettingsBuilder) throws Throwable {
-		return null;
-	}
-
-	@Override
 	protected Tuple<String[], RestResponse> handlePut(final RestRequest request, final Client client,
 			final Settings.Builder additionalSettingsBuilder) throws Throwable {
-		return null;
+		final String rolename = request.param("name");
+
+		if (rolename == null || rolename.length() == 0) {
+			return badRequestResponse("No rolename specified");
+		}
+
+		final Settings.Builder rolesmapping = load(ConfigurationService.CONFIGNAME_ROLES_MAPPING);
+		boolean existed = removeKeysStartingWith(rolesmapping.internalMap(), rolename + ".");
+		rolesmapping.put(prependValueToEachKey(additionalSettingsBuilder.build().getAsMap(), rolename + "."));
+		save(client, request, ConfigurationService.CONFIGNAME_ROLES_MAPPING, rolesmapping);
+		if (existed) {
+			return successResponse("Roles mapping " + rolename + " replaced.",
+					ConfigurationService.CONFIGNAME_ROLES_MAPPING);
+		} else {
+			return createdResponse("Roles mapping " + rolename + " created.",
+					ConfigurationService.CONFIGNAME_ROLES_MAPPING);
+		}
 	}
 
 	@Override
 	protected AbstractConfigurationValidator getValidator(Method method, BytesReference ref) {
 		return new RolesMappingValidator(method, ref);
+	}
+
+	@Override
+	protected String getResourceName() {
+		return "rolesmapping";
+	}
+
+	@Override
+	protected String getConfigName() {
+		return ConfigurationService.CONFIGNAME_ROLES_MAPPING;
 	}
 
 }

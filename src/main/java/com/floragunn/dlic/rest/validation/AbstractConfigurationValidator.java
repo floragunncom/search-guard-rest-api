@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.logging.ESLogger;
@@ -22,61 +23,74 @@ public abstract class AbstractConfigurationValidator {
 
 	/* public for testing */
 	public final static String INVALID_CONFIGURATION_MESSAGE = "invalid configuration";
-	
+
+	public final static String INVALID_PAYLOAD_MESSAGE = "Coud not parse content of request.";
+
 	/* public for testing */
 	public final static String INVALID_KEYS_KEY = "invalid_keys";
-	
+
 	/* public for testing */
 	public final static String MISSING_MANDATORY_KEYS_KEY = "missing_mandatory_keys";
 
 	/* public for testing */
 	public final static String MISSING_MANDATORY_OR_KEYS_KEY = "specify_one_of";
-	
-	protected final ESLogger log = Loggers.getLogger(this.getClass());
-	
-	/** Define the various keys for this validator */
-	protected final static Set<String> allowedKeys = new HashSet<>();
 
-	protected final static Set<String> mandatoryKeys = new HashSet<>();
-	
-	protected final static Set<String> mandatoryOrKeys = new HashSet<>();
-	
-	/** Contain errorneous keys  */
+	protected final ESLogger log = Loggers.getLogger(this.getClass());
+
+	/** Define the various keys for this validator */
+	protected final Set<String> allowedKeys = new HashSet<>();
+
+	protected final Set<String> mandatoryKeys = new HashSet<>();
+
+	protected final Set<String> mandatoryOrKeys = new HashSet<>();
+
+	/** Contain errorneous keys */
 	protected final Set<String> missingMandatoryKeys = new HashSet<>();
 
 	protected final Set<String> invalidKeys = new HashSet<>();
 
 	protected final Set<String> missingMandatoryOrKeys = new HashSet<>();
-	
+
 	private Settings.Builder settingsBuilder;
-	
-	private Method method;
-	
+
+	protected final Method method;
+
+	protected final BytesReference content;
+
+	protected boolean contentValid = true;
+
 	public AbstractConfigurationValidator(final Method method, final BytesReference ref) {
-		this.settingsBuilder = toSettingsBuilder(ref);
+		this.content = ref;
 		this.method = method;
-		validateSettings();
 	}
-	
-	private boolean validateSettings() {
-		Set<String> requested = settingsBuilder.build().names();
-		// no additional settings provided, nothing to validate
-		if(requested.size() == 0) {
+
+	public boolean validateSettings() {
+		// no payload for DELETE and GET requests
+		if (method.equals(Method.DELETE) || method.equals(Method.GET)) {
 			return true;
 		}
+		try {
+			this.settingsBuilder = toSettingsBuilder(content);
+		} catch (ElasticsearchException e) {
+			this.contentValid = false;
+			return false;
+		}
+
+		Set<String> requested = settingsBuilder.build().names();
+
 		// mandatory settings, one of
-		if(Collections.disjoint(requested, mandatoryOrKeys)) {
+		if (Collections.disjoint(requested, mandatoryOrKeys)) {
 			this.missingMandatoryOrKeys.addAll(mandatoryOrKeys);
 		}
-		
-		Set<String> mandatory = new HashSet<>(mandatoryKeys);		
+
+		Set<String> mandatory = new HashSet<>(mandatoryKeys);
 		mandatory.removeAll(requested);
 		missingMandatoryKeys.addAll(mandatory);
-		
+
 		// invalid settings
-		Set<String> allowed = new HashSet<>(allowedKeys);		
+		Set<String> allowed = new HashSet<>(allowedKeys);
 		requested.removeAll(allowed);
-		this.invalidKeys.addAll(requested);		
+		this.invalidKeys.addAll(requested);
 		return this.isValid();
 	}
 
@@ -84,10 +98,17 @@ public abstract class AbstractConfigurationValidator {
 		try {
 			final XContentBuilder builder = XContentFactory.jsonBuilder();
 			builder.startObject();
-			builder.field("status", INVALID_CONFIGURATION_MESSAGE);
-			addErrorMessage(builder, INVALID_KEYS_KEY, invalidKeys);
-			addErrorMessage(builder, MISSING_MANDATORY_KEYS_KEY, missingMandatoryKeys);
-			addErrorMessage(builder, MISSING_MANDATORY_OR_KEYS_KEY, missingMandatoryKeys);
+			if (!contentValid) {
+				builder.field("status", "error");
+				builder.field("reason", INVALID_PAYLOAD_MESSAGE);
+			} else {
+				builder.field("status", "error");
+				builder.field("reason", INVALID_CONFIGURATION_MESSAGE);
+				addErrorMessage(builder, INVALID_KEYS_KEY, invalidKeys);
+				addErrorMessage(builder, MISSING_MANDATORY_KEYS_KEY, missingMandatoryKeys);
+				addErrorMessage(builder, MISSING_MANDATORY_OR_KEYS_KEY, missingMandatoryKeys);
+				builder.endObject();
+			}
 			return builder;
 		} catch (IOException ex) {
 			log.error("Cannot build error settings", ex);
@@ -98,9 +119,9 @@ public abstract class AbstractConfigurationValidator {
 	public Settings.Builder settingsBuilder() {
 		return settingsBuilder;
 	}
-	
+
 	public boolean isValid() {
-		return missingMandatoryKeys.isEmpty() && invalidKeys.isEmpty() && missingMandatoryKeys.isEmpty();
+		return missingMandatoryKeys.isEmpty() && invalidKeys.isEmpty() && missingMandatoryOrKeys.isEmpty();
 	}
 
 	private void addErrorMessage(final XContentBuilder builder, final String message, final Set<String> keys)

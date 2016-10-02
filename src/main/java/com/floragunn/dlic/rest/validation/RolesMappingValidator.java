@@ -5,14 +5,13 @@ import org.elasticsearch.rest.RestRequest.Method;
 
 public class RolesMappingValidator extends AbstractConfigurationValidator {
 
-	static {
+	public RolesMappingValidator(final Method method, final BytesReference ref) {
+		super(method, ref);
+
 		allowedKeys.add("backendroles");
 		allowedKeys.add("hosts");
 		allowedKeys.add("users");
-	}
 
-	public RolesMappingValidator(final Method method, final BytesReference ref) {
-		super(method, ref);
 		if (method.equals(Method.PUT) || method.equals(Method.POST)) {
 			// means replace complete roles entry, we need at least one config
 			// key of ...

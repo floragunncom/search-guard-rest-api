@@ -1,5 +1,7 @@
 package com.floragunn.dlic.rest.api;
 
+import java.util.Map;
+
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
 import org.elasticsearch.common.settings.Settings;
@@ -28,6 +30,31 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		Settings settings = Settings.builder().loadFromSource(response.getBody()).build();
 		Assert.assertEquals(settings.getAsMap().size(), 2);
 
+		// --- GET
+
+		// GET, user admin, exists
+		response = rh.executeGetRequest("/_searchguard/api/user/admin", new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		Map<String, String> settingsAsMap = settings.getAsMap();
+		Assert.assertEquals(1, settingsAsMap.size());
+		Assert.assertEquals("$2a$12$VcCDgh2NDk07JGN0rjGbM.Ad41qVR/YFJcgHp0UGns5JDymv..TOG",
+				settingsAsMap.get("admin.hash"));
+
+		// GET, user does not exist
+		response = rh.executeGetRequest("/_searchguard/api/user/nothinghthere", new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatusCode());
+
+		// GET, malformed URL
+		response = rh.executeGetRequest("/_searchguard/api/user/", new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+
+		// GET, malformed URL
+		response = rh.executeGetRequest("/_searchguard/api/user", new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+
+		// -- PUT
+
 		// no username given
 		response = rh.executePutRequest("/_searchguard/api/user/", "{hash: \"123\"}", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
@@ -35,17 +62,23 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		response = rh.executePutRequest("/_searchguard/api/user", "{hash: \"123\"}", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 
-		// add user with wrong JSON payload and check error message
+		// Faulty JSON payload
+		response = rh.executePutRequest("/_searchguard/api/user/nagilum", "{some: \"thing\" asd  other: \"thing\"}",
+				new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		Assert.assertEquals(settings.get("reason"), AbstractConfigurationValidator.INVALID_PAYLOAD_MESSAGE);
+
+		// Wrong config keys
 		response = rh.executePutRequest("/_searchguard/api/user/nagilum", "{some: \"thing\", other: \"thing\"}",
 				new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody()).build();
-		Assert.assertEquals(settings.get("status"), AbstractConfigurationValidator.INVALID_CONFIGURATION_MESSAGE);
+		Assert.assertEquals(settings.get("reason"), AbstractConfigurationValidator.INVALID_CONFIGURATION_MESSAGE);
 		Assert.assertTrue(settings.get(AbstractConfigurationValidator.INVALID_KEYS_KEY + ".keys").contains("some"));
 		Assert.assertTrue(settings.get(AbstractConfigurationValidator.INVALID_KEYS_KEY + ".keys").contains("other"));
 
 		// add user with correct setting. User is in role "sg_all_access"
-		// password: nagilum
 
 		// check access not allowed
 		checkGeneralAccess(HttpStatus.SC_UNAUTHORIZED, "nagilum", "nagilum");
@@ -90,12 +123,7 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		// ROLES
 
 		// create index first
-
-		rh.sendHTTPClientCertificate = true;
-		rh.executePutRequest("sf", null, new Header[0]);
-		rh.executePutRequest("sf/ships/0", "{\"number\" : \"NCC-1701-D\"}", new Header[0]);
-		rh.executePutRequest("sf/public/0", "{\"some\" : \"value\"}", new Header[0]);
-		rh.sendHTTPClientCertificate = false;
+		setupStarfleetIndex();
 
 		// use backendroles when creating user. User picard does not exist in
 		// the internal user DB
@@ -120,6 +148,17 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 1);
 		checkWriteAccess(HttpStatus.SC_CREATED, "picard", "picard", "sf", "ships", 1);
 		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 1);
+
+		rh.sendHTTPClientCertificate = true;
+		response = rh.executeGetRequest("/_searchguard/api/user/picard", new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settingsAsMap = settings.getAsMap();
+		Assert.assertEquals(3, settingsAsMap.size());
+		Assert.assertEquals("$2a$12$x55HUv6I8Tb9EcBdLkHvlua3pD9zgA0/hR6Y9YqD3o47NK35J7cs2",
+				settingsAsMap.get("picard.hash"));
+		Assert.assertEquals("starfleet", settingsAsMap.get("picard.roles.0"));
+		Assert.assertEquals("captains", settingsAsMap.get("picard.roles.1"));
 
 	}
 

@@ -152,11 +152,12 @@ public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
 	}
 
 	protected void setupStarfleetIndex() throws Exception {
+		boolean sendHTTPClientCertificate = rh.sendHTTPClientCertificate;
 		rh.sendHTTPClientCertificate = true;
 		rh.executePutRequest("sf", null, new Header[0]);
 		rh.executePutRequest("sf/ships/0", "{\"number\" : \"NCC-1701-D\"}", new Header[0]);
 		rh.executePutRequest("sf/public/0", "{\"some\" : \"value\"}", new Header[0]);
-		rh.sendHTTPClientCertificate = false;
+		rh.sendHTTPClientCertificate = sendHTTPClientCertificate;
 	}
 
 	protected void setupSearchGuardIndex() {

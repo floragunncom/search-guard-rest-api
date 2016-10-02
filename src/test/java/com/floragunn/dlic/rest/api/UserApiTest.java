@@ -10,6 +10,7 @@ import org.junit.Test;
 
 import com.floragunn.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.configuration.ConfigurationService;
+import com.google.common.base.Strings;
 
 import test.helper.rest.RestHelper.HttpResponse;
 
@@ -155,10 +156,9 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		settings = Settings.builder().loadFromSource(response.getBody()).build();
 		settingsAsMap = settings.getAsMap();
 		Assert.assertEquals(3, settingsAsMap.size());
-		Assert.assertEquals("$2a$12$x55HUv6I8Tb9EcBdLkHvlua3pD9zgA0/hR6Y9YqD3o47NK35J7cs2",
-				settingsAsMap.get("picard.hash"));
-		Assert.assertEquals("starfleet", settingsAsMap.get("picard.roles.0"));
-		Assert.assertEquals("captains", settingsAsMap.get("picard.roles.1"));
+		Assert.assertNotEquals(null, Strings.emptyToNull(settingsAsMap.get("picard.hash")));
+		Assert.assertEquals("starfleet", settingsAsMap.get("picard.roles.0").trim());
+		Assert.assertEquals("captains", settingsAsMap.get("picard.roles.1").trim());
 
 	}
 

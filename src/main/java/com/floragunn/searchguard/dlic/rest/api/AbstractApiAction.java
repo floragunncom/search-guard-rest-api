@@ -113,18 +113,47 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	}
 
 	protected Tuple<String[], RestResponse> handleDelete(final RestRequest request, final Client client,
-			final Settings.Builder additionalSettings) throws Throwable {
-		return notImplemented(Method.DELETE);
+			final Settings.Builder additionalSettingsBuilder) throws Throwable {
+		final String name = request.param("name");
+
+		if (name == null || name.length() == 0) {
+			return badRequestResponse("No " + getResourceName() + " specified");
+		}
+
+		final Settings.Builder existing = load(getConfigName());
+
+		boolean modified = removeKeysStartingWith(existing.internalMap(), name + ".");
+
+		if (modified) {
+			save(client, request, getConfigName(), existing);
+			return successResponse(getResourceName() + " " + name + " deleted.", getConfigName());
+		} else {
+			return notFound(getResourceName() + " " + name + " not found.");
+		}
+	}
+
+	protected Tuple<String[], RestResponse> handlePut(final RestRequest request, final Client client,
+			final Settings.Builder additionalSettingsBuilder) throws Throwable {
+		final String name = request.param("name");
+
+		if (name == null || name.length() == 0) {
+			return badRequestResponse("No " + getResourceName() + " specified");
+		}
+
+		final Settings.Builder existing = load(getConfigName());
+		boolean existed = removeKeysStartingWith(existing.internalMap(), name + ".");
+		existing.put(prependValueToEachKey(additionalSettingsBuilder.build().getAsMap(), name + "."));
+		save(client, request, getConfigName(), existing);
+		if (existed) {
+			return successResponse(getResourceName() + " " + name + " replaced.", getConfigName());
+		} else {
+			return createdResponse(getResourceName() + " " + name + " created.", getConfigName());
+		}
 	}
 
 	protected Tuple<String[], RestResponse> handlePost(final RestRequest request, final Client client,
 			final Settings.Builder additionalSettings) throws Throwable {
 		return notImplemented(Method.POST);
-	}
-
-	protected Tuple<String[], RestResponse> handlePut(final RestRequest request, final Client client,
-			final Settings.Builder additionalSettings) throws Throwable {
-		return notImplemented(Method.PUT);
 	}
 
 	protected Tuple<String[], RestResponse> handleGet(RestRequest request, Client client, Builder additionalSettings)
@@ -388,6 +417,22 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		for (final String key : new HashSet<String>(map.keySet())) {
 			if (key != null) {
 				copy.put(prepend + key, map.get(key));
+			}
+		}
+
+		return copy;
+	}
+
+	protected Map<String, String> removeLeadingValueFromEachKey(final Map<String, String> map, final String remove) {
+		if (map == null || map.isEmpty() || remove == null || remove.isEmpty()) {
+			return map;
+		}
+
+		final Map<String, String> copy = new HashMap<String, String>();
+
+		for (final String key : new HashSet<String>(map.keySet())) {
+			if (key != null) {
+				copy.put(key.replaceAll(remove, ""), map.get(key));
 			}
 		}
 

@@ -28,7 +28,7 @@ public class RolesMappingApiTest extends AbstractRestApiUnitTest {
 
 		// -- GET
 
-		// GET, user admin, exists
+		// GET sg_role_starfleet, exists
 		response = rh.executeGetRequest("/_searchguard/api/rolesmapping/sg_role_starfleet", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		Settings settings = Settings.builder().loadFromSource(response.getBody()).build();
@@ -95,21 +95,21 @@ public class RolesMappingApiTest extends AbstractRestApiUnitTest {
 		response = rh.executePutRequest("/_searchguard/api/rolesmapping/sg_role_starfleet_captains", "", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody()).build();
-		Assert.assertEquals(AbstractConfigurationValidator.INVALID_CONFIGURATION_MESSAGE, settings.get("reason"));
+		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.INVALID_CONFIGURATION.getMessage(), settings.get("reason"));
 
 		// put new configuration with invalid payload, must fail
 		response = rh.executePutRequest("/_searchguard/api/rolesmapping/sg_role_starfleet_captains",
 				FileHelper.loadFile("rolesmapping_not_parseable.json"), new Header[0]);
 		settings = Settings.builder().loadFromSource(response.getBody()).build();
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
-		Assert.assertEquals(AbstractConfigurationValidator.INVALID_PAYLOAD_MESSAGE, settings.get("reason"));
+		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.BODY_NOT_PARSEABLE.getMessage(), settings.get("reason"));
 
 		// put new configuration with invalid keys, must fail
 		response = rh.executePutRequest("/_searchguard/api/rolesmapping/sg_role_starfleet_captains",
 				FileHelper.loadFile("rolesmapping_invalid_keys.json"), new Header[0]);
 		settings = Settings.builder().loadFromSource(response.getBody()).build();
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
-		Assert.assertEquals(AbstractConfigurationValidator.INVALID_CONFIGURATION_MESSAGE, settings.get("reason"));
+		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.INVALID_CONFIGURATION.getMessage(), settings.get("reason"));
 		Assert.assertTrue(settings.get(AbstractConfigurationValidator.INVALID_KEYS_KEY + ".keys").contains("theusers"));
 		Assert.assertTrue(
 				settings.get(AbstractConfigurationValidator.INVALID_KEYS_KEY + ".keys").contains("thebackendroles"));

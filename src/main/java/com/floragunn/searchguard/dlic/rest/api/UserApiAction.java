@@ -22,12 +22,10 @@ import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestRequest.Method;
 import org.elasticsearch.rest.RestResponse;
-import org.elasticsearch.rest.RestStatus;
 
 import com.floragunn.searchguard.auditlog.AuditLog;
 import com.floragunn.searchguard.configuration.AdminDNs;
@@ -47,26 +45,6 @@ public class UserApiAction extends AbstractApiAction {
 		controller.registerHandler(Method.GET, "/_searchguard/api/user/", this);
 		controller.registerHandler(Method.DELETE, "/_searchguard/api/user/{name}", this);
 		controller.registerHandler(Method.PUT, "/_searchguard/api/user/{name}", this);
-	}
-
-	@Override
-	protected Tuple<String[], RestResponse> handleDelete(final RestRequest request, final Client client,
-			final Settings.Builder additionalSettingsBuilder) throws Throwable {
-		final String username = request.param("name");
-
-		if (username == null || username.length() == 0) {
-			return badRequestResponse("No username given");
-		}
-
-		final Settings.Builder internaluser = load(ConfigurationService.CONFIGNAME_INTERNAL_USERS);
-
-		if (removeKeysStartingWith(internaluser.internalMap(), username + ".")) {
-			save(client, request, "internalusers", internaluser);
-			return new Tuple<String[], RestResponse>(new String[] { ConfigurationService.CONFIGNAME_INTERNAL_USERS },
-					new BytesRestResponse(RestStatus.OK));
-		}
-
-		return new Tuple<String[], RestResponse>(new String[0], new BytesRestResponse(RestStatus.NOT_FOUND));
 	}
 
 	@Override

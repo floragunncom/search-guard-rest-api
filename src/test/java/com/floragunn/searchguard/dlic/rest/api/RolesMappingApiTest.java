@@ -39,7 +39,7 @@ public class RolesMappingApiTest extends AbstractRestApiUnitTest {
 		Assert.assertEquals("*.starfleetintranet.com", settingsAsMap.get("sg_role_starfleet.hosts.0"));
 		Assert.assertEquals("nagilum", settingsAsMap.get("sg_role_starfleet.users.0"));
 
-		// GET, user does not exist
+		// GET, rolesmapping does not exist
 		response = rh.executeGetRequest("/_searchguard/api/rolesmapping/nothinghthere", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatusCode());
 
@@ -95,7 +95,7 @@ public class RolesMappingApiTest extends AbstractRestApiUnitTest {
 		response = rh.executePutRequest("/_searchguard/api/rolesmapping/sg_role_starfleet_captains", "", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody()).build();
-		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.INVALID_CONFIGURATION.getMessage(), settings.get("reason"));
+		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.PAYLOAD_MANDATORY.getMessage(), settings.get("reason"));
 
 		// put new configuration with invalid payload, must fail
 		response = rh.executePutRequest("/_searchguard/api/rolesmapping/sg_role_starfleet_captains",

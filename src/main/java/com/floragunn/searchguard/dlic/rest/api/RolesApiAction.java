@@ -21,10 +21,10 @@ public class RolesApiAction extends AbstractApiAction {
 	public RolesApiAction(Settings settings, RestController controller, Client client, AdminDNs adminDNs, ConfigurationLoader cl,
 			ClusterService cs, AuditLog auditLog) {
 		super(settings, controller, client, adminDNs, cl, cs, auditLog);
-		controller.registerHandler(Method.GET, "/_searchguard/api/role/", this);
-		controller.registerHandler(Method.GET, "/_searchguard/api/role/{name}", this);
-		controller.registerHandler(Method.DELETE, "/_searchguard/api/role/{name}", this);
-		controller.registerHandler(Method.PUT, "/_searchguard/api/role/{name}", this);
+		controller.registerHandler(Method.GET, "/_searchguard/api/roles/", this);
+		controller.registerHandler(Method.GET, "/_searchguard/api/roles/{name}", this);
+		controller.registerHandler(Method.DELETE, "/_searchguard/api/roles/{name}", this);
+		controller.registerHandler(Method.PUT, "/_searchguard/api/roles/{name}", this);
 	}
 
 	@Override

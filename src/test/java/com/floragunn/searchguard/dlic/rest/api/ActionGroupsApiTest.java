@@ -109,7 +109,7 @@ public class ActionGroupsApiTest extends AbstractRestApiUnitTest {
 		checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 0);
 		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
 
-		// restore READ actionn groups
+		// restore READ action groups
 		rh.sendHTTPClientCertificate = true;
 		response = rh.executePutRequest("/_searchguard/api/actiongroup/READ", FileHelper.loadFile("actiongroup_read.json"), new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_CREATED, response.getStatusCode());

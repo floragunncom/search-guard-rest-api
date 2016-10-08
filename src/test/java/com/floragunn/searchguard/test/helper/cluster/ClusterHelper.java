@@ -30,12 +30,13 @@ public class ClusterHelper {
 	protected final ESLogger log = Loggers.getLogger(ClusterHelper.class);
 
 	protected List<Node> esNodes = new LinkedList<>();
-	
+
 	public final static String clustername = "searchguard_testcluster";
-	
+
 	/**
 	 * Start n Elasticsearch nodes with the provided settings
-	 * @return 
+	 * 
+	 * @return
 	 */
 	public final ClusterInfo startCluster(final Settings settings, ClusterConfiguration clusterConfiguration)
 			throws Exception {
@@ -56,6 +57,7 @@ public class ClusterHelper {
 					SearchGuardSSLPlugin.class, SearchGuardPlugin.class);
 			node.start();
 			esNodes.add(node);
+			Thread.sleep(200);
 		}
 		ClusterInfo cInfo = waitForGreenClusterState();
 		cInfo.numNodes = nodeSettings.size();
@@ -63,13 +65,13 @@ public class ClusterHelper {
 	}
 
 	public final void stopCluster() throws Exception {
-		Thread.sleep(1000);
 		for (Node node : esNodes) {
 			node.close();
+			Thread.sleep(500);
 		}
 		esNodes.clear();
 	}
-	
+
 	/**
 	 * Waits for a green cluster state.
 	 * 
@@ -92,7 +94,8 @@ public class ClusterHelper {
 		try {
 			log.debug("waiting for cluster state {}", status.name());
 			final ClusterHealthResponse healthResponse = client.admin().cluster().prepareHealth()
-					.setWaitForStatus(status).setTimeout(timeout).setWaitForNodes(""+esNodes.size()).execute().actionGet();
+					.setWaitForStatus(status).setTimeout(timeout).setWaitForNodes("" + esNodes.size()).execute()
+					.actionGet();
 			if (healthResponse.isTimedOut()) {
 				throw new IOException("cluster state is " + healthResponse.getStatus().name() + " with "
 						+ healthResponse.getNumberOfNodes() + " nodes");
@@ -135,9 +138,9 @@ public class ClusterHelper {
 			final boolean dataNode, final boolean tribeNode) {
 
 		return Settings.settingsBuilder().put("node.name", "searchguard_testnode_" + nodenum).put("node.data", dataNode)
-				.put("node.master", masterNode).put("cluster.name", clustername)
-				.put("path.data", "data/data").put("path.work", "data/work").put("path.logs", "data/logs")
-				.put("path.conf", "data/config").put("path.plugins", "data/plugins").put("index.number_of_shards", "1")
+				.put("node.master", masterNode).put("cluster.name", clustername).put("path.data", "data/data")
+				.put("path.work", "data/work").put("path.logs", "data/logs").put("path.conf", "data/config")
+				.put("path.plugins", "data/plugins").put("index.number_of_shards", "1")
 				.put("index.number_of_replicas", "0").put("http.enabled", true)
 				.put("cluster.routing.allocation.disk.watermark.high", "1mb")
 				.put("cluster.routing.allocation.disk.watermark.low", "1mb").put("http.cors.enabled", true)

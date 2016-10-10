@@ -14,7 +14,7 @@ As with any other module for Search Guard, you just need to place the jar file i
 ## Commercial use
 This software is free of charge for non-commercial and academic use. For commercial use in a production environment you have to obtain a license [here](https://floragunn.com/searchguard/searchguard-license-support/) 
 
-## Documentation & Download
+## Documentation
 Documentation is provided in our [official Search Guard 2 docs](https://github.com/floragunncom/search-guard-docs/blob/master/managementapi.md)
 
 ##License

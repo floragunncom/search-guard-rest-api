@@ -15,6 +15,8 @@
 package com.floragunn.searchguard.dlic.rest.api;
 
 import java.net.InetSocketAddress;
+import java.util.Arrays;
+import java.util.Collection;
 
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
@@ -22,18 +24,22 @@ import org.apache.http.message.BasicHeader;
 import org.elasticsearch.action.admin.cluster.node.info.NodesInfoRequest;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.support.WriteRequest.RefreshPolicy;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.plugins.Plugin;
+import org.elasticsearch.transport.Netty4Plugin;
 import org.junit.Assert;
 
 import com.floragunn.searchguard.SearchGuardPlugin;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateAction;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateRequest;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateResponse;
-import com.floragunn.searchguard.configuration.ConfigurationService;
 import com.floragunn.searchguard.ssl.SearchGuardSSLPlugin;
 import com.floragunn.searchguard.ssl.util.SSLConfigConstants;
+import com.floragunn.searchguard.support.ConfigConstants;
 import com.floragunn.searchguard.test.AbstractSGUnitTest;
 import com.floragunn.searchguard.test.helper.cluster.ClusterConfiguration;
 import com.floragunn.searchguard.test.helper.cluster.ClusterHelper;
@@ -163,41 +169,37 @@ public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
 						FileHelper.getAbsoluteFilePathFromClassPath("kirk-keystore.jks"))
 				.put(SSLConfigConstants.SEARCHGUARD_SSL_TRANSPORT_KEYSTORE_ALIAS, "kirk").put("path.home", ".").build();
 
-		try (TransportClient tc = TransportClient.builder().settings(tcSettings).addPlugin(SearchGuardSSLPlugin.class)
-				.addPlugin(SearchGuardPlugin.class).build()) {
+		try (TransportClient tc = new TransportClientImpl(tcSettings,asCollection(Netty4Plugin.class, SearchGuardPlugin.class))) {
 
 			log.debug("Start transport client to init");
 
 			tc.addTransportAddress(new InetSocketTransportAddress(new InetSocketAddress(ci.nodeHost, ci.nodePort)));
 			Assert.assertEquals(ci.numNodes,
-					tc.admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().length);
+					tc.admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().size());
 
 			tc.admin().indices().create(new CreateIndexRequest("searchguard")).actionGet();
 
-			tc.index(new IndexRequest("searchguard").type("dummy").id("0").refresh(true)
-					.source(FileHelper.readYamlContent("sg_config.yml"))).actionGet();
-
-			tc.index(new IndexRequest("searchguard").type("config").id("0").refresh(true)
-					.source(FileHelper.readYamlContent("sg_config.yml"))).actionGet();
-			tc.index(new IndexRequest("searchguard").type("internalusers").refresh(true).id("0")
-					.source(FileHelper.readYamlContent("sg_internal_users.yml"))).actionGet();
-			tc.index(new IndexRequest("searchguard").type("roles").id("0").refresh(true)
-					.source(FileHelper.readYamlContent("sg_roles.yml"))).actionGet();
-			tc.index(new IndexRequest("searchguard").type("rolesmapping").refresh(true).id("0")
-					.source(FileHelper.readYamlContent("sg_roles_mapping.yml"))).actionGet();
-			tc.index(new IndexRequest("searchguard").type("actiongroups").refresh(true).id("0")
-					.source(FileHelper.readYamlContent("sg_action_groups.yml"))).actionGet();
+			tc.index(new IndexRequest("searchguard").type("config").id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE)
+					.source("config", FileHelper.readYamlContent("sg_config.yml"))).actionGet();
+			tc.index(new IndexRequest("searchguard").type("internalusers").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
+					.source("internalusers", FileHelper.readYamlContent("sg_internal_users.yml"))).actionGet();
+			tc.index(new IndexRequest("searchguard").type("roles").id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE)
+					.source("roles", FileHelper.readYamlContent("sg_roles.yml"))).actionGet();
+			tc.index(new IndexRequest("searchguard").type("rolesmapping").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
+					.source("rolesmapping", FileHelper.readYamlContent("sg_roles_mapping.yml"))).actionGet();
+			tc.index(new IndexRequest("searchguard").type("actiongroups").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
+					.source("actiongroups", FileHelper.readYamlContent("sg_action_groups.yml"))).actionGet();
 
 			ConfigUpdateResponse cur = tc
-					.execute(ConfigUpdateAction.INSTANCE, new ConfigUpdateRequest(ConfigurationService.CONFIGNAMES))
+					.execute(ConfigUpdateAction.INSTANCE, new ConfigUpdateRequest(ConfigConstants.CONFIGNAMES))
 					.actionGet();
-			Assert.assertEquals(ci.numNodes, cur.getNodes().length);
+			Assert.assertEquals(ci.numNodes, cur.getNodes().size());
 
 		}
 	}
 
 	protected Settings defaultNodeSettings(boolean enableRestSSL) {
-		Settings.Builder builder = Settings.settingsBuilder().put("searchguard.ssl.transport.enabled", true)
+		Settings.Builder builder = Settings.builder().put("searchguard.ssl.transport.enabled", true)
 				.put(SSLConfigConstants.SEARCHGUARD_SSL_HTTP_ENABLE_OPENSSL_IF_AVAILABLE, false)
 				.put(SSLConfigConstants.SEARCHGUARD_SSL_TRANSPORT_ENABLE_OPENSSL_IF_AVAILABLE, false)
 				.put(SSLConfigConstants.SEARCHGUARD_SSL_TRANSPORT_KEYSTORE_ALIAS, "node-0")
@@ -218,4 +220,19 @@ public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
 		}
 		return builder.build();
 	}
+	
+	protected static class TransportClientImpl extends TransportClient {
+
+        public TransportClientImpl(Settings settings, Collection<Class<? extends Plugin>> plugins) {
+            super(settings, plugins);
+        }
+
+        public TransportClientImpl(Settings settings, Settings defaultSettings, Collection<Class<? extends Plugin>> plugins) {
+            super(settings, defaultSettings, plugins);
+        }       
+    }
+	
+	protected static Collection<Class<? extends Plugin>> asCollection(Class<? extends Plugin>... plugins) {
+        return Arrays.asList(plugins);
+    }
 }

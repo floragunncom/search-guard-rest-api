@@ -17,7 +17,7 @@ package com.floragunn.searchguard.dlic.rest.api;
 import java.util.Arrays;
 
 import org.elasticsearch.client.Client;
-import org.elasticsearch.cluster.ClusterService;
+import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.inject.Inject;
@@ -32,9 +32,9 @@ import org.elasticsearch.rest.RestStatus;
 import com.floragunn.searchguard.auditlog.AuditLog;
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.ConfigurationLoader;
-import com.floragunn.searchguard.configuration.ConfigurationService;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.dlic.rest.validation.NoOpValidator;
+import com.floragunn.searchguard.support.ConfigConstants;
 import com.google.common.base.Joiner;
 
 public class GetConfigurationApiAction extends AbstractApiAction {
@@ -52,9 +52,9 @@ public class GetConfigurationApiAction extends AbstractApiAction {
 		final String configname = request.param("configname");
 
 		if (configname == null || configname.length() == 0
-				|| !Arrays.asList(ConfigurationService.CONFIGNAMES).contains(configname)) {
+				|| !Arrays.asList(ConfigConstants.CONFIGNAMES).contains(configname)) {
 			return badRequestResponse("No configuration name given, must be one of "
-					+ Joiner.on(",").join(ConfigurationService.CONFIGNAMES));
+					+ Joiner.on(",").join(ConfigConstants.CONFIGNAMES));
 
 		}
 

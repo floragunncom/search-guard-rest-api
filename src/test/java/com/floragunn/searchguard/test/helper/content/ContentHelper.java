@@ -25,7 +25,7 @@ import org.elasticsearch.common.xcontent.XContentType;
 
 public class ContentHelper {
 
-	public static XContentBuilder parseJsonContent(final String jsonContent) {
+	/*public static XContentBuilder parseJsonContent(final String jsonContent) {
 		try {
 			return readXContent(new StringReader(jsonContent), XContentType.YAML);
 		} catch (IOException e) {
@@ -46,5 +46,5 @@ public class ContentHelper {
 				parser.close();
 			}
 		}
-	}
+	}*/
 }

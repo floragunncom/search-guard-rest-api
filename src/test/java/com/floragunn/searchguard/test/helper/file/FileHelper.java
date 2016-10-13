@@ -25,9 +25,11 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.elasticsearch.ExceptionsHelper;
+import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
-import org.elasticsearch.common.logging.ESLogger;
-import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentParser;
@@ -38,7 +40,7 @@ import com.floragunn.searchguard.test.helper.content.ContentHelper;
 
 public class FileHelper {
 
-	protected final static ESLogger log = Loggers.getLogger(FileHelper.class);
+	protected final static Logger log = LogManager.getLogger(FileHelper.class);
 
 	public static File getAbsoluteFilePathFromClassPath(final String fileNameFromClasspath) {
 		File file = null;
@@ -67,14 +69,23 @@ public class FileHelper {
 		IOUtils.copy(FileHelper.class.getResourceAsStream("/" + file), sw, StandardCharsets.UTF_8);
 		return sw.toString();
 	}
-
-	public static XContentBuilder readYamlContent(final String file) {
-		try {
-			return ContentHelper.readXContent(new StringReader(loadFile(file)), XContentType.YAML);
-		} catch (IOException e) {
-			return null;
-		}
+	
+    public static BytesReference readYamlContent(final String file) {
+        
+        XContentParser parser = null;
+        try {
+            parser = XContentFactory.xContent(XContentType.YAML).createParser(new StringReader(loadFile(file)));
+            parser.nextToken();
+            final XContentBuilder builder = XContentFactory.jsonBuilder();
+            builder.copyCurrentStructure(parser);
+            return builder.bytes();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        finally {
+            if (parser != null) {
+                parser.close();
+            }
+        }
 	}
-
-
 }

@@ -20,6 +20,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.elasticsearch.ElasticsearchTimeoutException;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.admin.cluster.node.info.NodeInfo;
@@ -27,8 +29,6 @@ import org.elasticsearch.action.admin.cluster.node.info.NodesInfoRequest;
 import org.elasticsearch.action.admin.cluster.node.info.NodesInfoResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.health.ClusterHealthStatus;
-import org.elasticsearch.common.logging.ESLogger;
-import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.unit.TimeValue;
@@ -41,7 +41,7 @@ import com.floragunn.searchguard.test.helper.cluster.ClusterConfiguration.NodeSe
 
 public class ClusterHelper {
 
-	protected final ESLogger log = Loggers.getLogger(ClusterHelper.class);
+	protected final Logger log = LogManager.getLogger(ClusterHelper.class);
 
 	protected List<Node> esNodes = new LinkedList<>();
 
@@ -68,7 +68,7 @@ public class ClusterHelper {
 			Node node = new PluginAwareNode(
 					getDefaultSettingsBuilder(i, setting.masterNode, setting.dataNode, setting.tribeNode)
 							.put(settings == null ? Settings.Builder.EMPTY_SETTINGS : settings).build(),
-					SearchGuardSSLPlugin.class, SearchGuardPlugin.class);
+					SearchGuardPlugin.class);
 			node.start();
 			esNodes.add(node);
 			Thread.sleep(200);
@@ -122,11 +122,10 @@ public class ClusterHelper {
 
 			final NodesInfoResponse res = client.admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet();
 
-			final NodeInfo[] nodes = res.getNodes();
+			final List<NodeInfo> nodes = res.getNodes();
 
 			// TODO: can be optimized
-			for (int i = 0; i < nodes.length; i++) {
-				final NodeInfo nodeInfo = nodes[i];
+			for (NodeInfo nodeInfo: nodes) {
 				if (nodeInfo.getHttp() != null && nodeInfo.getHttp().address() != null) {
 					final InetSocketTransportAddress is = (InetSocketTransportAddress) nodeInfo.getHttp().address()
 							.publishAddress();
@@ -151,14 +150,21 @@ public class ClusterHelper {
 	private Settings.Builder getDefaultSettingsBuilder(final int nodenum, final boolean masterNode,
 			final boolean dataNode, final boolean tribeNode) {
 
-		return Settings.settingsBuilder().put("node.name", "searchguard_testnode_" + nodenum).put("node.data", dataNode)
-				.put("node.master", masterNode).put("cluster.name", clustername).put("path.data", "data/data")
-				.put("path.work", "data/work").put("path.logs", "data/logs").put("path.conf", "data/config")
-				.put("path.plugins", "data/plugins").put("index.number_of_shards", "1")
-				.put("index.number_of_replicas", "0").put("http.enabled", true)
+		return Settings.builder()
+		        .put("node.name", "searchguard_testnode_" + nodenum)
+		        .put("node.data", dataNode)
+				.put("node.master", masterNode)
+				.put("cluster.name", clustername)
+				.put("path.data", "data/data")
+				.put("path.logs", "data/logs")
+				.put("path.conf", "data/config")
+				.put("node.max_local_storage_nodes", 3)
+				.put("http.enabled", true)
 				.put("cluster.routing.allocation.disk.watermark.high", "1mb")
-				.put("cluster.routing.allocation.disk.watermark.low", "1mb").put("http.cors.enabled", true)
-				.put("node.local", false).put("path.home", ".");
+				.put("cluster.routing.allocation.disk.watermark.low", "1mb")
+				.put("http.cors.enabled", true)
+				.put("node.local", false)
+				.put("path.home", ".");
 	}
 	// @formatter:on
 }

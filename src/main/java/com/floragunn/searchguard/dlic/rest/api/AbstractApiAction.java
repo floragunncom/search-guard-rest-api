@@ -29,11 +29,12 @@ import java.util.concurrent.TimeoutException;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.WriteConsistencyLevel;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.action.support.WriteRequest.RefreshPolicy;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.cluster.ClusterService;
+import org.elasticsearch.client.node.NodeClient;
+import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.settings.Settings;
@@ -54,12 +55,15 @@ import org.elasticsearch.rest.RestResponse;
 import org.elasticsearch.rest.RestStatus;
 
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateAction;
+import com.floragunn.searchguard.action.configupdate.ConfigUpdateNodeResponse;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateRequest;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateResponse;
 import com.floragunn.searchguard.auditlog.AuditLog;
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.ConfigurationLoader;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
+import com.floragunn.searchguard.ssl.util.SSLRequestHelper;
+import com.floragunn.searchguard.ssl.util.SSLRequestHelper.SSLInfo;
 import com.floragunn.searchguard.support.ConfigConstants;
 import com.floragunn.searchguard.user.User;
 
@@ -76,7 +80,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 	protected AbstractApiAction(final Settings settings, final RestController controller, final Client client,
 			final AdminDNs adminDNs, final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog) {
-		super(settings, controller, client);
+		super(settings);
 		this.adminDNs = adminDNs;
 		this.cl = cl;
 		this.cs = cs;
@@ -198,10 +202,10 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		final Semaphore sem = new Semaphore(0);
 		final List<Throwable> exception = new ArrayList<Throwable>(1);
 		final IndexRequest ir = new IndexRequest("searchguard");
-		ir.putInContext(ConfigConstants.SG_USER,
-				new User((String) request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL)));
+		//ir.putInContext(ConfigConstants.SG_USER,
+		//		new User((String) request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL)));
 
-		client.index(ir.type(config).id("0").refresh(true).consistencyLevel(WriteConsistencyLevel.DEFAULT)
+		client.index(ir.type(config).id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE)
 				.source(toSource(settings)), new ActionListener<IndexResponse>() {
 
 					@Override
@@ -213,7 +217,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 					}
 
 					@Override
-					public void onFailure(final Throwable e) {
+					public void onFailure(final Exception e) {
 						sem.release();
 						exception.add(e);
 						logger.error("Cannot update {} due to {}", e, config, e);
@@ -232,29 +236,39 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 	}
 
+	
+	
 	@Override
-	protected final void handleRequest(final RestRequest request, final RestChannel channel, final Client client) {
+    protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
 
-		final X509Certificate[] certs = request.getFromContext(ConfigConstants.SG_SSL_PEER_CERTIFICATES);
+	    SSLInfo sslInfo = SSLRequestHelper.getSSLInfo(request);
+	    
+	    if (sslInfo == null) {
+            logger.error("No ssl info found");
+            // auditLog.logSgIndexAttempt(request, action); //TODO add method
+            // for rest request
+            final BytesRestResponse response = new BytesRestResponse(RestStatus.FORBIDDEN, "No ssl info found");
+            return channel -> channel.sendResponse(response);
+        }
+	    
+        X509Certificate[] certs = sslInfo.getX509Certs();
 
 		if (certs == null || certs.length == 0) {
 			logger.error("No certificate found");
 			// auditLog.logSgIndexAttempt(request, action); //TODO add method
 			// for rest request
 			final BytesRestResponse response = new BytesRestResponse(RestStatus.FORBIDDEN, "No certificates");
-			channel.sendResponse(response);
-			return;
+			return channel -> channel.sendResponse(response);
 		}
 
-		if (!adminDNs.isAdmin((String) request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL))) {
+		if (!adminDNs.isAdmin(sslInfo.getPrincipal())) {
 			// auditLog.logSgIndexAttempt(request, action); //TODO add method
 			// for rest request
 			logger.error("SG admin permissions required but {} is not an admin",
-					request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL));
+			        sslInfo.getPrincipal());
 			final BytesRestResponse response = new BytesRestResponse(RestStatus.FORBIDDEN,
 					"SG admin permissions required");
-			channel.sendResponse(response);
-			return;
+			return channel -> channel.sendResponse(response);
 		}
 
 		final Semaphore sem = new Semaphore(0);
@@ -266,13 +280,13 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			if (response.v1().length > 0) {
 
 				final ConfigUpdateRequest cur = new ConfigUpdateRequest(response.v1());
-				cur.putInContext(ConfigConstants.SG_USER,
-						new User((String) request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL)));
+				//cur.putInContext(ConfigConstants.SG_USER,
+				//		new User((String) request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL)));
 
 				client.execute(ConfigUpdateAction.INSTANCE, cur, new ActionListener<ConfigUpdateResponse>() {
 
 					@Override
-					public void onFailure(final Throwable e) {
+					public void onFailure(final Exception e) {
 						sem.release();
 						logger.error("Cannot update {} due to {}", e, Arrays.toString(response.v1()), e);
 						exception.add(e);
@@ -297,8 +311,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 		} catch (final Throwable e) {
 			logger.error("Unexpected exception {}", e, e);
-			channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, e.toString()));
-			return;
+			return channel -> channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, e.toString()));
 		}
 
 		try {
@@ -312,11 +325,10 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		}
 
 		if (exception.size() > 0) {
-			channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, exception.get(0).toString()));
-			return;
+	        return channel -> channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, exception.get(0).toString()));
 		}
 
-		channel.sendResponse(response.v2());
+		return channel -> channel.sendResponse(response.v2());
 
 	}
 
@@ -329,14 +341,14 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		final int nodeCount = cs.state().getNodes().getNodes().size();
 		final int expectedConfigCount = 1;
 
-		boolean success = response.getNodes().length == nodeCount;
+		boolean success = response.getNodes().size() == nodeCount;
 		if (!success) {
 			logger.error(
-					"Expected " + nodeCount + " nodes to return response, but got only " + response.getNodes().length);
+					"Expected " + nodeCount + " nodes to return response, but got only " + response.getNodes().size());
 		}
 
 		for (final String nodeId : response.getNodesMap().keySet()) {
-			final ConfigUpdateResponse.Node node = response.getNodesMap().get(nodeId);
+			final ConfigUpdateNodeResponse node = response.getNodesMap().get(nodeId);
 			final boolean successNode = node.getUpdatedConfigTypes() != null
 					&& node.getUpdatedConfigTypes().length == expectedConfigCount;
 
@@ -357,7 +369,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		}
 
 		try {
-			return Settings.builder().put(new JsonSettingsLoader().load(XContentHelper.createParser(ref))).build();
+			return Settings.builder().put(new JsonSettingsLoader(true).load(XContentHelper.createParser(ref))).build();
 		} catch (final IOException e) {
 			throw ExceptionsHelper.convertToElastic(e);
 		}
@@ -369,7 +381,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		}
 
 		try {
-			return Settings.builder().put(new JsonSettingsLoader().load(XContentHelper.createParser(ref)));
+			return Settings.builder().put(new JsonSettingsLoader(true).load(XContentHelper.createParser(ref)));
 		} catch (final IOException e) {
 			throw ExceptionsHelper.convertToElastic(e);
 		}

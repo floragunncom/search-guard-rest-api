@@ -19,11 +19,11 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.common.bytes.BytesReference;
-import org.elasticsearch.common.logging.ESLogger;
-import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.loader.JsonSettingsLoader;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -44,7 +44,7 @@ public abstract class AbstractConfigurationValidator {
 	/* public for testing */
 	public final static String MISSING_MANDATORY_OR_KEYS_KEY = "specify_one_of";
 
-	protected final ESLogger log = Loggers.getLogger(this.getClass());
+	protected final Logger log = LogManager.getLogger(this.getClass());
 
 	/** Define the various keys for this validator */
 	protected final Set<String> allowedKeys = new HashSet<>();
@@ -171,7 +171,7 @@ public abstract class AbstractConfigurationValidator {
 		}
 
 		try {
-			return Settings.builder().put(new JsonSettingsLoader().load(XContentHelper.createParser(ref)));
+			return Settings.builder().put(new JsonSettingsLoader(true).load(XContentHelper.createParser(ref)));
 		} catch (final IOException e) {
 			throw ExceptionsHelper.convertToElastic(e);
 		}

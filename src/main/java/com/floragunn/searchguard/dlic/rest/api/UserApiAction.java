@@ -17,7 +17,7 @@ package com.floragunn.searchguard.dlic.rest.api;
 import java.util.Objects;
 
 import org.elasticsearch.client.Client;
-import org.elasticsearch.cluster.ClusterService;
+import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.inject.Inject;
@@ -30,10 +30,10 @@ import org.elasticsearch.rest.RestResponse;
 import com.floragunn.searchguard.auditlog.AuditLog;
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.ConfigurationLoader;
-import com.floragunn.searchguard.configuration.ConfigurationService;
 import com.floragunn.searchguard.crypto.BCrypt;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.dlic.rest.validation.InternalUsersValidator;
+import com.floragunn.searchguard.support.ConfigConstants;
 
 public class UserApiAction extends AbstractApiAction {
 
@@ -66,17 +66,17 @@ public class UserApiAction extends AbstractApiAction {
 		final Settings additionalSettings = additionalSettingsBuilder.build();
 
 		// first, remove any existing user
-		final Settings.Builder internaluser = load(ConfigurationService.CONFIGNAME_INTERNAL_USERS);
+		final Settings.Builder internaluser = load(ConfigConstants.CONFIGNAME_INTERNAL_USERS);
 		boolean userExisted = removeKeysStartingWith(internaluser.internalMap(), username + ".");
 
 		// add user with settings
 		internaluser.put(prependValueToEachKey(additionalSettings.getAsMap(), username + "."));
-		save(client, request, ConfigurationService.CONFIGNAME_INTERNAL_USERS, internaluser);
+		save(client, request, ConfigConstants.CONFIGNAME_INTERNAL_USERS, internaluser);
 
 		if (userExisted) {
-			return successResponse("User " + username + " updated", ConfigurationService.CONFIGNAME_INTERNAL_USERS);
+			return successResponse("User " + username + " updated", ConfigConstants.CONFIGNAME_INTERNAL_USERS);
 		} else {
-			return createdResponse("User " + username + " created", ConfigurationService.CONFIGNAME_INTERNAL_USERS);
+			return createdResponse("User " + username + " created", ConfigConstants.CONFIGNAME_INTERNAL_USERS);
 		}
 
 	}
@@ -92,7 +92,7 @@ public class UserApiAction extends AbstractApiAction {
 
 	@Override
 	protected String getConfigName() {
-		return ConfigurationService.CONFIGNAME_INTERNAL_USERS;
+		return ConfigConstants.CONFIGNAME_INTERNAL_USERS;
 	}
 
 	@Override

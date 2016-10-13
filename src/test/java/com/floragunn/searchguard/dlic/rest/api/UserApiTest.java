@@ -22,8 +22,8 @@ import org.elasticsearch.common.settings.Settings;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.floragunn.searchguard.configuration.ConfigurationService;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
+import com.floragunn.searchguard.support.ConfigConstants;
 import com.floragunn.searchguard.test.helper.rest.RestHelper.HttpResponse;
 import com.google.common.base.Strings;
 
@@ -39,7 +39,7 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 
 		// initial configuration, 2 users
 		HttpResponse response = rh
-				.executeGetRequest("_searchguard/api/configuration/" + ConfigurationService.CONFIGNAME_INTERNAL_USERS);
+				.executeGetRequest("_searchguard/api/configuration/" + ConfigConstants.CONFIGNAME_INTERNAL_USERS);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		Settings settings = Settings.builder().loadFromSource(response.getBody()).build();
 		Assert.assertEquals(settings.getAsMap().size(), 2);

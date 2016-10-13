@@ -37,8 +37,8 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
-import org.elasticsearch.common.logging.ESLogger;
-import org.elasticsearch.common.logging.Loggers;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.floragunn.searchguard.test.helper.cluster.ClusterInfo;
 import com.floragunn.searchguard.test.helper.file.FileHelper;
@@ -46,7 +46,7 @@ import com.google.common.base.Strings;
 
 public class RestHelper {
 
-	protected final ESLogger log = Loggers.getLogger(RestHelper.class);
+	protected final Logger log = LogManager.getLogger(RestHelper.class);
 	
 	public boolean enableHTTPClientSSL = true;
 	public boolean enableHTTPClientSSLv3Only = false;
@@ -91,7 +91,7 @@ public class RestHelper {
 	}
 
 	public HttpResponse executeGetRequest(final String request, Header... header) throws Exception {
-		return executeRequest(new HttpGet(getHttpServerUri() + "/" + request), header);
+	    return executeRequest(new HttpGet(getHttpServerUri() + "/" + request), header);
 	}
 
 	public HttpResponse executePutRequest(final String request, String body, Header... header) throws Exception {
@@ -130,7 +130,7 @@ public class RestHelper {
 			}
 
 			HttpResponse res = new HttpResponse(httpClient.execute(uriRequest));
-			log.trace(res.getBody());
+			log.debug(res.getBody());
 			return res;
 		} finally {
 

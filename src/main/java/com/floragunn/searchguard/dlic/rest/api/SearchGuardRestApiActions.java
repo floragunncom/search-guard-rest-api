@@ -14,7 +14,12 @@
 
 package com.floragunn.searchguard.dlic.rest.api;
 
-import org.elasticsearch.rest.RestModule;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+
+import org.elasticsearch.rest.RestHandler;
 
 import com.floragunn.searchguard.dlic.rest.api.ActionGroupsApiAction;
 import com.floragunn.searchguard.dlic.rest.api.GetConfigurationApiAction;
@@ -24,11 +29,13 @@ import com.floragunn.searchguard.dlic.rest.api.UserApiAction;
 
 public class SearchGuardRestApiActions {
 
-	public static void addActions(final RestModule module) {
-		module.addRestAction(UserApiAction.class);
-		module.addRestAction(RolesMappingApiAction.class);
-		module.addRestAction(RolesApiAction.class);
-		module.addRestAction(ActionGroupsApiAction.class);
-		module.addRestAction(GetConfigurationApiAction.class);
+	public static Collection<Class<? extends RestHandler>> getHandler() {
+	    List<Class<? extends RestHandler>> handlers = new ArrayList<Class<? extends RestHandler>>(5);
+	    handlers.add(UserApiAction.class);
+	    handlers.add(RolesMappingApiAction.class);
+	    handlers.add(RolesApiAction.class);
+	    handlers.add(ActionGroupsApiAction.class);
+	    handlers.add(GetConfigurationApiAction.class);
+	    return Collections.unmodifiableCollection(handlers);
 	}
 }

@@ -15,7 +15,7 @@ package com.floragunn.searchguard.dlic.rest.api;
  */
 
 import org.elasticsearch.client.Client;
-import org.elasticsearch.cluster.ClusterService;
+import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
@@ -25,9 +25,9 @@ import org.elasticsearch.rest.RestRequest.Method;
 import com.floragunn.searchguard.auditlog.AuditLog;
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.ConfigurationLoader;
-import com.floragunn.searchguard.configuration.ConfigurationService;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.dlic.rest.validation.RolesValidator;
+import com.floragunn.searchguard.support.ConfigConstants;
 
 public class RolesApiAction extends AbstractApiAction {
 
@@ -53,7 +53,7 @@ public class RolesApiAction extends AbstractApiAction {
 
 	@Override
 	protected String getConfigName() {
-		return ConfigurationService.CONFIGNAME_ROLES;
+		return ConfigConstants.CONFIGNAME_ROLES;
 	}
 
 }

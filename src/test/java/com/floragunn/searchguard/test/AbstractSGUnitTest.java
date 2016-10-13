@@ -14,13 +14,15 @@
 
 package com.floragunn.searchguard.test;
 
+import io.netty.handler.ssl.OpenSsl;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 import javax.xml.bind.DatatypeConverter;
 
-import org.elasticsearch.common.logging.ESLogger;
-import org.elasticsearch.common.logging.Loggers;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.rules.TestName;
@@ -30,8 +32,6 @@ import com.floragunn.searchguard.test.helper.cluster.ClusterHelper;
 import com.floragunn.searchguard.test.helper.cluster.ClusterInfo;
 import com.floragunn.searchguard.test.helper.rest.RestHelper;
 import com.floragunn.searchguard.test.helper.rules.SGTestWatcher;
-
-import io.netty.handler.ssl.OpenSsl;
 
 public abstract class AbstractSGUnitTest {
 
@@ -51,7 +51,7 @@ public abstract class AbstractSGUnitTest {
 	protected RestHelper rh;
 	protected ClusterInfo ci;
 	
-	protected final ESLogger log = Loggers.getLogger(this.getClass());
+	protected final Logger log = LogManager.getLogger(this.getClass());
 	
 	@Rule
 	public TestName name = new TestName();

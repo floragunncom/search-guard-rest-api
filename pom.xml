@@ -14,7 +14,7 @@
 
   <groupId>com.floragunn</groupId>
   <artifactId>dlic-search-guard-rest-api</artifactId>
-  <version>2.4-1-SNAPSHOT</version>
+  <version>5.0-1-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>Search Guard</name>
@@ -36,7 +36,6 @@
  <properties>
       <sg2.version>5.0.0-rc1-6b-SNAPSHOT</sg2.version>
       <elasticsearch.version>5.0.0-rc1</elasticsearch.version>
-      <lucene.version>5.5.0</lucene.version>
       <dependency.locations.enabled>false</dependency.locations.enabled>
     </properties>
 
@@ -66,7 +65,7 @@
   <parent>
     <groupId>org.sonatype.oss</groupId>
     <artifactId>oss-parent</artifactId>
-    <version>7</version>
+    <version>9</version>
   </parent>
 
   <dependencies>
@@ -116,7 +115,7 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.11</version>
+      <version>4.12</version>
       <scope>test</scope>
     </dependency>
 

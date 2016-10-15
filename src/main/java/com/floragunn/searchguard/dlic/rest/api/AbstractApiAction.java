@@ -47,7 +47,6 @@ import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
-import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestRequest.Method;
@@ -64,8 +63,6 @@ import com.floragunn.searchguard.configuration.ConfigurationLoader;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.ssl.util.SSLRequestHelper;
 import com.floragunn.searchguard.ssl.util.SSLRequestHelper.SSLInfo;
-import com.floragunn.searchguard.support.ConfigConstants;
-import com.floragunn.searchguard.user.User;
 
 public abstract class AbstractApiAction extends BaseRestHandler {
 
@@ -99,6 +96,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		// validate additional settings, if any
 		AbstractConfigurationValidator validator = getValidator(request.method(), request.content());
 		if (!validator.validateSettings()) {
+		    request.params().clear();
 			return new Tuple<String[], RestResponse>(new String[0],
 					new BytesRestResponse(RestStatus.BAD_REQUEST, validator.errorsAsXContent()));
 		}
@@ -247,6 +245,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
             logger.error("No ssl info found");
             // auditLog.logSgIndexAttempt(request, action); //TODO add method
             // for rest request
+            request.params().clear();
             final BytesRestResponse response = new BytesRestResponse(RestStatus.FORBIDDEN, "No ssl info found");
             return channel -> channel.sendResponse(response);
         }
@@ -257,6 +256,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			logger.error("No certificate found");
 			// auditLog.logSgIndexAttempt(request, action); //TODO add method
 			// for rest request
+			request.params().clear();
 			final BytesRestResponse response = new BytesRestResponse(RestStatus.FORBIDDEN, "No certificates");
 			return channel -> channel.sendResponse(response);
 		}
@@ -264,6 +264,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		if (!adminDNs.isAdmin(sslInfo.getPrincipal())) {
 			// auditLog.logSgIndexAttempt(request, action); //TODO add method
 			// for rest request
+		    request.params().clear();
 			logger.error("SG admin permissions required but {} is not an admin",
 			        sslInfo.getPrincipal());
 			final BytesRestResponse response = new BytesRestResponse(RestStatus.FORBIDDEN,
@@ -311,6 +312,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 		} catch (final Throwable e) {
 			logger.error("Unexpected exception {}", e, e);
+			request.params().clear();
 			return channel -> channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, e.toString()));
 		}
 
@@ -325,6 +327,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		}
 
 		if (exception.size() > 0) {
+		    request.params().clear();
 	        return channel -> channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, exception.get(0).toString()));
 		}
 

@@ -34,6 +34,7 @@ import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.node.PluginAwareNode;
+import org.elasticsearch.transport.Netty4Plugin;
 
 import com.floragunn.searchguard.SearchGuardPlugin;
 import com.floragunn.searchguard.ssl.SearchGuardSSLPlugin;
@@ -68,7 +69,7 @@ public class ClusterHelper {
 			Node node = new PluginAwareNode(
 					getDefaultSettingsBuilder(i, setting.masterNode, setting.dataNode, setting.tribeNode)
 							.put(settings == null ? Settings.Builder.EMPTY_SETTINGS : settings).build(),
-					SearchGuardPlugin.class);
+					Netty4Plugin.class, SearchGuardPlugin.class);
 			node.start();
 			esNodes.add(node);
 			Thread.sleep(200);

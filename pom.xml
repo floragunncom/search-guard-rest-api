@@ -33,11 +33,11 @@
     </repository>
   </distributionManagement>
 
- <properties>
+  <properties>
       <sg2.version>5.0.0-rc1-6b-SNAPSHOT</sg2.version>
       <elasticsearch.version>5.0.0-rc1</elasticsearch.version>
       <dependency.locations.enabled>false</dependency.locations.enabled>
-    </properties>
+  </properties>
 
   <scm>
     <url>https://github.com/floragunncom/search-guard-rest-api.git</url>
@@ -94,6 +94,7 @@
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>fluent-hc</artifactId>
       <version>4.3.4</version>
+      <scope>test</scope>
     </dependency>
 
     <!-- Only test scoped dependencies hereafter -->

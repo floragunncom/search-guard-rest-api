@@ -3,8 +3,8 @@ machine:
     version: openjdk7
     #version: oraclejdk7
 
-#deployment:
-#  deploysnap:
-#    branch: master
-#    commands:
-#      - mvn deploy -DskipTests -s settings.xml
+deployment:
+  deploysnap:
+    branch: master
+    commands:
+      - mvn deploy -DskipTests -s settings.xml

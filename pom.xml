@@ -37,7 +37,6 @@
       <sg2.version>2.4.0.7</sg2.version>
       <sgssl.version>2.4.0.16</sgssl.version>
       <elasticsearch.version>2.4.0</elasticsearch.version>
-      <lucene.version>5.5.0</lucene.version>
       <dependency.locations.enabled>false</dependency.locations.enabled>
     </properties>
 
@@ -92,13 +91,14 @@
       <scope>provided</scope>
     </dependency>
   
+    <!-- Only test scoped dependencies hereafter -->
+  
     <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>fluent-hc</artifactId>
       <version>4.3.4</version>
+      <scope>test</scope>
     </dependency>
-
-    <!-- Only test scoped dependencies hereafter -->
 
     <dependency>
       <groupId>org.hamcrest</groupId>
@@ -108,10 +108,10 @@
     </dependency>
 
     <dependency>
-          <groupId>commons-io</groupId>
-          <artifactId>commons-io</artifactId>
-          <version>2.4</version>
-          <scope>test</scope>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>2.4</version>
+      <scope>test</scope>
     </dependency>
     
     <dependency>
@@ -129,20 +129,12 @@
     </dependency>
     
     <dependency>
-    <groupId>org.apache.lucene</groupId>
-    <artifactId>lucene-test-framework</artifactId>
-    <version>${lucene.version}</version>
-    <scope>test</scope>
-  </dependency>
-  <dependency>
-    <groupId>org.elasticsearch</groupId>
-    <artifactId>elasticsearch</artifactId>
-    <version>${elasticsearch.version}</version>
-    <scope>test</scope>
-    <type>test-jar</type>
-  </dependency>
-    
-    
+      <groupId>org.elasticsearch</groupId>
+      <artifactId>elasticsearch</artifactId>
+      <version>${elasticsearch.version}</version>
+      <scope>test</scope>
+      <type>test-jar</type>
+    </dependency>
   </dependencies>
 
   <build>

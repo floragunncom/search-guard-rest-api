@@ -44,7 +44,7 @@ import com.floragunn.searchguard.test.helper.rest.RestHelper.HttpResponse;
 public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
 
 	protected void setup() throws Exception {
-		setup(ClusterConfiguration.DEFAULT);
+		setup(ClusterConfiguration.SINGLENODE);
 	}
 
 	protected void setup(ClusterConfiguration configuration) throws Exception {

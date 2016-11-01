@@ -143,5 +143,14 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
 		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
 		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
+
+		rh.sendHTTPClientCertificate = true;
+		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet_captains",
+				FileHelper.loadFile("roles_multiple.json"), new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+
+		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet_captains",
+				FileHelper.loadFile("roles_multiple_2.json"), new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 	}
 }

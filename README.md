@@ -3,7 +3,7 @@
 ![Logo](https://raw.githubusercontent.com/floragunncom/sg-assets/master/logo/sg_dlic_small.png) 
 
 ## About this module
-This module for [Search Guard 2](https://github.com/floragunncom/search-guard) adds a management API via REST.
+This module for [Search Guard 2](https://github.com/floragunncom/search-guard) and [Search Guard 5](https://github.com/floragunncom/search-guard) adds a management API via REST.
 
 ## Commercial use
 This software is free of charge for non-commercial and academic use. For commercial use in a production environment you have to obtain a license [here](https://floragunn.com/searchguard/searchguard-license-support/) 

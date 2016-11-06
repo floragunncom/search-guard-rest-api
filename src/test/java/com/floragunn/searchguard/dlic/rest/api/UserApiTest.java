@@ -84,11 +84,11 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		Assert.assertEquals(settings.get("reason"), AbstractConfigurationValidator.ErrorType.BODY_NOT_PARSEABLE.getMessage());
 
 		// Wrong config keys
-		response = rh.executePutRequest("/_searchguard/api/user/nagilum", "{some: \"thing\", other: \"thing\"}",
+		response = rh.executePutRequest("/_searchguard/api/user/nagilum", "{\"some\": \"thing\", \"other\": \"thing\"}",
 				new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody()).build();
-		Assert.assertEquals(settings.get("reason"), AbstractConfigurationValidator.ErrorType.INVALID_CONFIGURATION.getMessage());
+		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.INVALID_CONFIGURATION.getMessage(), settings.get("reason"));
 		Assert.assertTrue(settings.get(AbstractConfigurationValidator.INVALID_KEYS_KEY + ".keys").contains("some"));
 		Assert.assertTrue(settings.get(AbstractConfigurationValidator.INVALID_KEYS_KEY + ".keys").contains("other"));
 
@@ -143,7 +143,8 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		// the internal user DB
 		// and is also not assigned to any role by username
 		addUserWithPassword("picard", "picard", HttpStatus.SC_CREATED);
-		checkGeneralAccess(HttpStatus.SC_OK, "picard", "picard");
+		// changed in ES5, you now need cluster:monitor/main which pucard does not have
+		checkGeneralAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard");
 
 		// check read access to starfleet index and ships type, must fail
 		checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 0);

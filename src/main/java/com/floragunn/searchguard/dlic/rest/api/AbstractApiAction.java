@@ -15,6 +15,7 @@
 package com.floragunn.searchguard.dlic.rest.api;
 
 import java.io.IOException;
+import java.io.Reader;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,6 +46,7 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
@@ -204,7 +206,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		//		new User((String) request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL)));
 
 		client.index(ir.type(config).id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE)
-				.source(toSource(settings)), new ActionListener<IndexResponse>() {
+				.source(config, toSource(settings)), new ActionListener<IndexResponse>() {
 
 					@Override
 					public void onResponse(final IndexResponse response) {
@@ -335,10 +337,14 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 	}
 
-	protected static XContentBuilder toSource(final Settings.Builder settingsBuilder) throws IOException {
-		return XContentFactory.jsonBuilder().map(settingsBuilder.build().getAsStructuredMap());
+	protected static BytesReference toSource(final Settings.Builder settingsBuilder) throws IOException {
+		final XContentBuilder builder = XContentFactory.jsonBuilder();
+        builder.startObject(); //1
+        settingsBuilder.build().toXContent(builder, ToXContent.EMPTY_PARAMS);
+        builder.endObject(); //2
+        return builder.bytes(); 
 	}
-
+        
 	protected boolean checkConfigUpdateResponse(final ConfigUpdateResponse response) {
 
 		final int nodeCount = cs.state().getNodes().getNodes().size();

@@ -71,17 +71,10 @@
   <dependencies>
     <dependency>
       <groupId>com.floragunn</groupId>
-      <artifactId>search-guard-2</artifactId>
+      <artifactId>search-guard-5</artifactId>
       <version>${sg2.version}</version>
       <scope>provided</scope>
     </dependency>
-
-    <!-- <dependency>
-      <groupId>com.floragunn</groupId>
-      <artifactId>search-guard-ssl</artifactId>
-      <version>${sgssl.version}</version>
-      <scope>provided</scope>
-    </dependency> -->
     
     <dependency>
       <groupId>org.elasticsearch</groupId>
@@ -119,13 +112,6 @@
       <version>4.12</version>
       <scope>test</scope>
     </dependency>
-
-  <!--   <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-log4j12</artifactId>
-      <version>1.7.7</version>
-      <scope>test</scope>
-    </dependency> -->
     
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
@@ -133,21 +119,6 @@
       <version>2.6.2</version>
       <scope>provided</scope>
     </dependency>
-    
-   <!--  <dependency>
-    <groupId>org.apache.lucene</groupId>
-    <artifactId>lucene-test-framework</artifactId>
-    <version>${lucene.version}</version>
-    <scope>test</scope>
-  </dependency>
-  <dependency>
-    <groupId>org.elasticsearch</groupId>
-    <artifactId>elasticsearch</artifactId>
-    <version>${elasticsearch.version}</version>
-    <scope>test</scope>
-    <type>test-jar</type>
-  </dependency> -->
-    
     
   </dependencies>
 

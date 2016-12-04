@@ -8,5 +8,9 @@
   	  "*": ["READ"]
   	}
   },
-  "cluster": ["cluster:monitor*", "indices:data/read/scroll"]    
+  
+  "cluster": 
+  
+  
+  ["cluster:monitor*", "indices:data/read/scroll"]    
 }

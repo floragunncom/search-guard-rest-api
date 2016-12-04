@@ -122,6 +122,17 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
 		Assert.assertTrue(
 				settings.get(AbstractConfigurationValidator.INVALID_KEYS_KEY + ".keys").contains("kluster"));
 
+		// put new configuration with wrong datatypes, must fail
+		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet",
+				FileHelper.loadFile("roles_wrong_datatype.json"), new Header[0]);
+		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.WRONG_DATATYPE.getMessage(), settings.get("reason"));
+		Assert.assertTrue(settings.get("indices").equals("Object expected"));
+		Assert.assertTrue(settings.get("cluster").equals("Array expected"));
+
+
+		
 		// restore starfleet role
 		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet",
 				FileHelper.loadFile("roles_starfleet.json"), new Header[0]);
@@ -143,5 +154,14 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
 		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
 		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
+
+		rh.sendHTTPClientCertificate = true;
+		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet_captains",
+				FileHelper.loadFile("roles_multiple.json"), new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+
+		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet_captains",
+				FileHelper.loadFile("roles_multiple_2.json"), new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 	}
 }

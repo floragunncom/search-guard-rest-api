@@ -71,7 +71,6 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	private final AdminDNs adminDNs;
 	private final ConfigurationLoader cl;
 	private final ClusterService cs;
-	private final AuditLog auditLog;
 
 	static {
 		printLicenseInfo();
@@ -83,7 +82,6 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		this.adminDNs = adminDNs;
 		this.cl = cl;
 		this.cs = cs;
-		this.auditLog = auditLog;
 	}
 
 	protected abstract AbstractConfigurationValidator getValidator(final Method method, BytesReference ref);

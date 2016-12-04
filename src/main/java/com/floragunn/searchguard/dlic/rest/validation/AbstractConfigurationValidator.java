@@ -16,7 +16,10 @@ package com.floragunn.searchguard.dlic.rest.validation;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
@@ -31,9 +34,14 @@ import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.rest.RestRequest.Method;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
 import com.google.common.base.Joiner;
 
 public abstract class AbstractConfigurationValidator {
+
+	JsonFactory factory = new JsonFactory();
 
 	/* public for testing */
 	public final static String INVALID_KEYS_KEY = "invalid_keys";
@@ -47,11 +55,13 @@ public abstract class AbstractConfigurationValidator {
 	protected final Logger log = LogManager.getLogger(this.getClass());
 
 	/** Define the various keys for this validator */
-	protected final Set<String> allowedKeys = new HashSet<>();
+	protected final Map<String, DataType> allowedKeys = new HashMap<>();
 
 	protected final Set<String> mandatoryKeys = new HashSet<>();
 
 	protected final Set<String> mandatoryOrKeys = new HashSet<>();
+
+	protected final Map<String, String> wrongDatatypes = new HashMap<>();
 
 	/** Contain errorneous keys */
 	protected final Set<String> missingMandatoryKeys = new HashSet<>();
@@ -92,7 +102,9 @@ public abstract class AbstractConfigurationValidator {
 			return false;
 		}
 
-		Set<String> requested = settingsBuilder.build().names();
+		Settings settings = settingsBuilder.build();
+
+		Set<String> requested = settings.names();
 		// check if payload is accepted at all
 		if (!this.payloadAllowed && !requested.isEmpty()) {
 			this.errorType = ErrorType.PAYLOAD_NOT_ALLOWED;
@@ -103,7 +115,6 @@ public abstract class AbstractConfigurationValidator {
 			this.errorType = ErrorType.PAYLOAD_MANDATORY;
 			return false;
 		}
-		// payload ok, check allowed, mandatory and mandatory OR keys
 
 		// mandatory settings, one of ...
 		if (Collections.disjoint(requested, mandatoryOrKeys)) {
@@ -116,14 +127,59 @@ public abstract class AbstractConfigurationValidator {
 		missingMandatoryKeys.addAll(mandatory);
 
 		// invalid settings
-		Set<String> allowed = new HashSet<>(allowedKeys);
+		Set<String> allowed = new HashSet<>(allowedKeys.keySet());
 		requested.removeAll(allowed);
 		this.invalidKeys.addAll(requested);
 		boolean valid = missingMandatoryKeys.isEmpty() && invalidKeys.isEmpty() && missingMandatoryOrKeys.isEmpty();
 		if (!valid) {
 			this.errorType = ErrorType.INVALID_CONFIGURATION;
 		}
+
+		// check types
+		try {
+			if (!checkDatatypes()) {
+				this.errorType = ErrorType.WRONG_DATATYPE;
+				return false;
+			}
+		} catch (Exception e) {
+			this.errorType = ErrorType.BODY_NOT_PARSEABLE;
+			return false;
+		}
+
 		return valid;
+	}
+
+	private boolean checkDatatypes() throws Exception {		
+		String contentAsJson = XContentHelper.convertToJson(content, false);
+		JsonParser parser = factory.createParser(contentAsJson);
+		JsonToken token = null;
+		while ((token = parser.nextToken()) != null) {
+			if(token.equals(JsonToken.FIELD_NAME)) {
+				String currentName = parser.getCurrentName();
+				DataType dataType = allowedKeys.get(currentName);
+				if(dataType != null) {
+					JsonToken valueToken = parser.nextToken();
+					switch (dataType) {
+					case STRING:
+						if(!valueToken.equals(JsonToken.VALUE_STRING)) {
+							wrongDatatypes.put(currentName, "String expected");
+						}
+						break;
+					case ARRAY:
+						if(!valueToken.equals(JsonToken.START_ARRAY) && !valueToken.equals(JsonToken.END_ARRAY)) {
+							wrongDatatypes.put(currentName, "Array expected");
+						}
+						break;
+					case OBJECT:
+						if(!valueToken.equals(JsonToken.START_OBJECT) && !valueToken.equals(JsonToken.END_OBJECT)) {
+							wrongDatatypes.put(currentName, "Object expected");
+						}
+						break;						
+					}
+				}
+			}
+		}
+		return wrongDatatypes.isEmpty();
 	}
 
 	public XContentBuilder errorsAsXContent() {
@@ -139,6 +195,13 @@ public abstract class AbstractConfigurationValidator {
 				addErrorMessage(builder, INVALID_KEYS_KEY, invalidKeys);
 				addErrorMessage(builder, MISSING_MANDATORY_KEYS_KEY, missingMandatoryKeys);
 				addErrorMessage(builder, MISSING_MANDATORY_OR_KEYS_KEY, missingMandatoryKeys);
+				break;
+			case WRONG_DATATYPE:
+				builder.field("status", "error");
+				builder.field("reason", ErrorType.WRONG_DATATYPE.getMessage());
+				for (Entry<String, String> entry : wrongDatatypes.entrySet()) {
+					builder.field( entry.getKey(), entry.getValue());
+				}
 				break;
 			default:
 				builder.field("status", "error");
@@ -177,10 +240,17 @@ public abstract class AbstractConfigurationValidator {
 		}
 	}
 
+	public static enum DataType {
+		STRING,
+		ARRAY,
+		OBJECT;
+	}
+
 	public static enum ErrorType {
-		NONE("ok"),
-		INVALID_CONFIGURATION("invalid configuration"),
-		BODY_NOT_PARSEABLE("Coud not parse content of request."),
+		NONE("ok"),		
+		INVALID_CONFIGURATION("Invalid configuration"),
+		WRONG_DATATYPE("Wrong datatype"),
+		BODY_NOT_PARSEABLE("Could not parse content of request."),
 		PAYLOAD_NOT_ALLOWED("Request body not allowed for this action."),
 		PAYLOAD_MANDATORY("Request body required for this action.");
 

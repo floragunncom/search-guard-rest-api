@@ -11,7 +11,6 @@
  * from https://floragunn.com
  * 
  */
-
 package com.floragunn.searchguard.dlic.rest.api;
 
 import java.util.ArrayList;
@@ -20,12 +19,6 @@ import java.util.Collections;
 import java.util.List;
 
 import org.elasticsearch.rest.RestHandler;
-
-import com.floragunn.searchguard.dlic.rest.api.ActionGroupsApiAction;
-import com.floragunn.searchguard.dlic.rest.api.GetConfigurationApiAction;
-import com.floragunn.searchguard.dlic.rest.api.RolesApiAction;
-import com.floragunn.searchguard.dlic.rest.api.RolesMappingApiAction;
-import com.floragunn.searchguard.dlic.rest.api.UserApiAction;
 
 public class SearchGuardRestApiActions {
 

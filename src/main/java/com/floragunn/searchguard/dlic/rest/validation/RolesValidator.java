@@ -22,8 +22,8 @@ public class RolesValidator extends AbstractConfigurationValidator {
 	public RolesValidator(final Method method, final BytesReference ref) {
 		super(method, ref);
 		this.payloadMandatory = true;
-		allowedKeys.add("indices");
-		allowedKeys.add("cluster");
+		allowedKeys.put("indices", DataType.OBJECT);
+		allowedKeys.put("cluster", DataType.ARRAY);
 
 		mandatoryOrKeys.add("indices");
 		mandatoryOrKeys.add("cluster");

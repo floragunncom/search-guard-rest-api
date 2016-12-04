@@ -129,6 +129,34 @@ public class RolesMappingApiTest extends AbstractRestApiUnitTest {
 				settings.get(AbstractConfigurationValidator.INVALID_KEYS_KEY + ".keys").contains("thebackendroles"));
 		Assert.assertTrue(settings.get(AbstractConfigurationValidator.INVALID_KEYS_KEY + ".keys").contains("thehosts"));
 
+		// wrong datatypes
+		response = rh.executePutRequest("/_searchguard/api/rolesmapping/sg_role_starfleet_captains",
+				FileHelper.loadFile("rolesmapping_backendroles_captains_single_wrong_datatype.json"), new Header[0]);
+		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.WRONG_DATATYPE.getMessage(), settings.get("reason"));
+		Assert.assertTrue(settings.get("backendroles").equals("Array expected"));		
+		Assert.assertTrue(settings.get("hosts") == null);
+		Assert.assertTrue(settings.get("users") == null);
+
+		response = rh.executePutRequest("/_searchguard/api/rolesmapping/sg_role_starfleet_captains",
+				FileHelper.loadFile("rolesmapping_hosts_single_wrong_datatype.json"), new Header[0]);
+		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.WRONG_DATATYPE.getMessage(), settings.get("reason"));
+		Assert.assertTrue(settings.get("hosts").equals("Array expected"));		
+		Assert.assertTrue(settings.get("backendroles") == null);
+		Assert.assertTrue(settings.get("users") == null);		
+
+		response = rh.executePutRequest("/_searchguard/api/rolesmapping/sg_role_starfleet_captains",
+				FileHelper.loadFile("rolesmapping_users_picard_single_wrong_datatype.json"), new Header[0]);
+		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.WRONG_DATATYPE.getMessage(), settings.get("reason"));
+		Assert.assertTrue(settings.get("hosts").equals("Array expected"));		
+		Assert.assertTrue(settings.get("users").equals("Array expected"));	
+		Assert.assertTrue(settings.get("backendroles").equals("Array expected"));	
+		
 		response = rh.executePutRequest("/_searchguard/api/rolesmapping/sg_role_starfleet_captains",
 				FileHelper.loadFile("rolesmapping_all_access.json"), new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_CREATED, response.getStatusCode());

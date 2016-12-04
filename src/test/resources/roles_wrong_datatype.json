@@ -1,0 +1,13 @@
+{
+  "indices": [
+  	 {
+  	  "ships": ["READ"],
+  	  "public": ["indices:*"]
+  	},
+  	 {
+  	  "*": ["READ"]
+  	}
+  ],
+  
+  "cluster": 123    
+}

@@ -22,9 +22,9 @@ public class RolesMappingValidator extends AbstractConfigurationValidator {
 	public RolesMappingValidator(final Method method, final BytesReference ref) {
 		super(method, ref);
 		this.payloadMandatory = true;
-		allowedKeys.add("backendroles");
-		allowedKeys.add("hosts");
-		allowedKeys.add("users");
+		allowedKeys.put("backendroles", DataType.ARRAY);
+		allowedKeys.put("hosts", DataType.ARRAY);
+		allowedKeys.put("users", DataType.ARRAY);
 
 		mandatoryOrKeys.add("backendroles");
 		mandatoryOrKeys.add("hosts");

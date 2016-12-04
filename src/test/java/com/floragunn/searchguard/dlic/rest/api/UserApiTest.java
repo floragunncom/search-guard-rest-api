@@ -24,6 +24,7 @@ import org.junit.Test;
 
 import com.floragunn.searchguard.configuration.ConfigurationService;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
+import com.floragunn.searchguard.test.helper.file.FileHelper;
 import com.floragunn.searchguard.test.helper.rest.RestHelper.HttpResponse;
 import com.google.common.base.Strings;
 
@@ -83,15 +84,22 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		settings = Settings.builder().loadFromSource(response.getBody()).build();
 		Assert.assertEquals(settings.get("reason"), AbstractConfigurationValidator.ErrorType.BODY_NOT_PARSEABLE.getMessage());
 
-		// Wrong config keys
+		// Missing quotes in JSON
 		response = rh.executePutRequest("/_searchguard/api/user/nagilum", "{some: \"thing\", other: \"thing\"}",
+				new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.BODY_NOT_PARSEABLE.getMessage(), settings.get("reason"));
+
+		// Wrong config keys
+		response = rh.executePutRequest("/_searchguard/api/user/nagilum", "{\"some\": \"thing\", \"other\": \"thing\"}",
 				new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody()).build();
 		Assert.assertEquals(settings.get("reason"), AbstractConfigurationValidator.ErrorType.INVALID_CONFIGURATION.getMessage());
 		Assert.assertTrue(settings.get(AbstractConfigurationValidator.INVALID_KEYS_KEY + ".keys").contains("some"));
 		Assert.assertTrue(settings.get(AbstractConfigurationValidator.INVALID_KEYS_KEY + ".keys").contains("other"));
-
+		
 		// add user with correct setting. User is in role "sg_all_access"
 
 		// check access not allowed
@@ -139,6 +147,40 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		// create index first
 		setupStarfleetIndex();
 
+		// wrong datatypes in roles file
+		rh.sendHTTPClientCertificate = true;
+		response = rh.executePutRequest("/_searchguard/api/user/picard", FileHelper.loadFile("users_wrong_datatypes.json"), new Header[0]);
+		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.WRONG_DATATYPE.getMessage(), settings.get("reason"));
+		Assert.assertTrue(settings.get("roles").equals("Array expected"));
+		rh.sendHTTPClientCertificate = false;
+
+		rh.sendHTTPClientCertificate = true;
+		response = rh.executePutRequest("/_searchguard/api/user/picard", FileHelper.loadFile("users_wrong_datatypes.json"), new Header[0]);
+		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.WRONG_DATATYPE.getMessage(), settings.get("reason"));
+		Assert.assertTrue(settings.get("roles").equals("Array expected"));
+		rh.sendHTTPClientCertificate = false;
+		
+		rh.sendHTTPClientCertificate = true;
+		response = rh.executePutRequest("/_searchguard/api/user/picard", FileHelper.loadFile("users_wrong_datatypes2.json"), new Header[0]);
+		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.WRONG_DATATYPE.getMessage(), settings.get("reason"));
+		Assert.assertTrue(settings.get("password").equals("String expected"));
+		Assert.assertTrue(settings.get("roles") == null);
+		rh.sendHTTPClientCertificate = false;		
+
+		rh.sendHTTPClientCertificate = true;
+		response = rh.executePutRequest("/_searchguard/api/user/picard", FileHelper.loadFile("users_wrong_datatypes3.json"), new Header[0]);
+		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.WRONG_DATATYPE.getMessage(), settings.get("reason"));
+		Assert.assertTrue(settings.get("roles").equals("Array expected"));
+		rh.sendHTTPClientCertificate = false;	
+		
 		// use backendroles when creating user. User picard does not exist in
 		// the internal user DB
 		// and is also not assigned to any role by username

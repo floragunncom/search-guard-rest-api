@@ -75,7 +75,7 @@ public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
 		boolean sendHTTPClientCertificate = rh.sendHTTPClientCertificate;
 		rh.sendHTTPClientCertificate = true;
 		HttpResponse response = rh.executePutRequest("/_searchguard/api/user/" + username,
-				"{password: \"" + password + "\"}", new Header[0]);
+				"{\"password\": \"" + password + "\"}", new Header[0]);
 		Assert.assertEquals(status, response.getStatusCode());
 		rh.sendHTTPClientCertificate = sendHTTPClientCertificate;
 	}
@@ -83,7 +83,7 @@ public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
 	protected void addUserWithPassword(String username, String password, String[] roles, int status) throws Exception {
 		boolean sendHTTPClientCertificate = rh.sendHTTPClientCertificate;
 		rh.sendHTTPClientCertificate = true;
-		String payload = "{" + "password: \"" + password + "\"," + "roles: [";
+		String payload = "{" + "\"password\": \"" + password + "\"," + "\"roles\": [";
 		for (int i = 0; i < roles.length; i++) {
 			payload += "\" " + roles[i] + " \"";
 			if (i + 1 < roles.length) {
@@ -103,7 +103,7 @@ public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
 	protected void addUserWithHash(String username, String hash, int status) throws Exception {
 		boolean sendHTTPClientCertificate = rh.sendHTTPClientCertificate;
 		rh.sendHTTPClientCertificate = true;
-		HttpResponse response = rh.executePutRequest("/_searchguard/api/user/" + username, "{hash: \"" + hash + "\"}",
+		HttpResponse response = rh.executePutRequest("/_searchguard/api/user/" + username, "{\"hash\": \"" + hash + "\"}",
 				new Header[0]);
 		Assert.assertEquals(status, response.getStatusCode());
 		rh.sendHTTPClientCertificate = sendHTTPClientCertificate;

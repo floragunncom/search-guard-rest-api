@@ -14,7 +14,7 @@
 
   <groupId>com.floragunn</groupId>
   <artifactId>dlic-search-guard-rest-api</artifactId>
-  <version>5.0-2-SNAPSHOT</version>
+  <version>5.0-3-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>Search Guard</name>

@@ -32,14 +32,16 @@ import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.ConfigurationLoader;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.dlic.rest.validation.ActionGroupValidator;
+import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
 import com.floragunn.searchguard.support.ConfigConstants;
 
 public class ActionGroupsApiAction extends AbstractApiAction {
 
 	@Inject
 	public ActionGroupsApiAction(final Settings settings, final RestController controller, final Client client,
-			final AdminDNs adminDNs, final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog) {
-		super(settings, controller, client, adminDNs, cl, cs, auditLog);
+			final AdminDNs adminDNs, final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog,
+            final PrincipalExtractor principalExtractor) {
+		super(settings, controller, client, adminDNs, cl, cs, auditLog, principalExtractor);
 		controller.registerHandler(Method.GET, "/_searchguard/api/actiongroup/{name}", this);
 		controller.registerHandler(Method.GET, "/_searchguard/api/actiongroup/", this);
 		controller.registerHandler(Method.DELETE, "/_searchguard/api/actiongroup/{name}", this);

@@ -63,6 +63,7 @@ import com.floragunn.searchguard.auditlog.AuditLog;
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.ConfigurationLoader;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
+import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
 import com.floragunn.searchguard.ssl.util.SSLRequestHelper;
 import com.floragunn.searchguard.ssl.util.SSLRequestHelper.SSLInfo;
 
@@ -71,17 +72,20 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	private final AdminDNs adminDNs;
 	private final ConfigurationLoader cl;
 	private final ClusterService cs;
+	private final PrincipalExtractor principalExtractor;
 
 	static {
 		printLicenseInfo();
 	}
 
 	protected AbstractApiAction(final Settings settings, final RestController controller, final Client client,
-			final AdminDNs adminDNs, final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog) {
+			final AdminDNs adminDNs, final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog,
+			final PrincipalExtractor principalExtractor) {
 		super(settings);
 		this.adminDNs = adminDNs;
 		this.cl = cl;
 		this.cs = cs;
+		this.principalExtractor = principalExtractor;
 	}
 
 	protected abstract AbstractConfigurationValidator getValidator(final Method method, BytesReference ref);
@@ -239,7 +243,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	@Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
 
-	    SSLInfo sslInfo = SSLRequestHelper.getSSLInfo(request);
+	    SSLInfo sslInfo = SSLRequestHelper.getSSLInfo(request, principalExtractor);
 	    
 	    if (sslInfo == null) {
             logger.error("No ssl info found");

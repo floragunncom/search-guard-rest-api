@@ -34,6 +34,7 @@ import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.ConfigurationLoader;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.dlic.rest.validation.NoOpValidator;
+import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
 import com.floragunn.searchguard.support.ConfigConstants;
 import com.google.common.base.Joiner;
 
@@ -41,8 +42,9 @@ public class GetConfigurationApiAction extends AbstractApiAction {
 
 	@Inject
 	public GetConfigurationApiAction(final Settings settings, final RestController controller, final Client client,
-			final AdminDNs adminDNs, final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog) {
-		super(settings, controller, client, adminDNs, cl, cs, auditLog);
+			final AdminDNs adminDNs, final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog,
+            final PrincipalExtractor principalExtractor) {
+		super(settings, controller, client, adminDNs, cl, cs, auditLog, principalExtractor);
 		controller.registerHandler(Method.GET, "/_searchguard/api/configuration/{configname}", this);
 	}
 

@@ -9,7 +9,7 @@ This module for [Search Guard 2](https://github.com/floragunncom/search-guard) a
 This software is free of charge for non-commercial and academic use. For commercial use in a production environment you have to obtain a license [here](https://floragunn.com/searchguard/searchguard-license-support/) 
 
 ## Documentation
-Documentation is provided in our [Search Guard Documentation](https://github.com/floragunncom/search-guard-docs/blob/master/restapi.md)
+Documentation is provided in our [Search Guard Documentation](https://github.com/floragunncom/search-guard-docs/blob/master/managementapi.md)
 
 ##License
 Copyright 2016 by floragunn UG (haftungsbeschränkt) - All rights reserved 

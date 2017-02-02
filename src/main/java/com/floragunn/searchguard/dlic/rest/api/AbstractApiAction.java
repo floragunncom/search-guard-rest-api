@@ -15,7 +15,6 @@
 package com.floragunn.searchguard.dlic.rest.api;
 
 import java.io.IOException;
-import java.io.Reader;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ExceptionsHelper;
@@ -41,12 +39,12 @@ import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.common.settings.loader.JsonSettingsLoader;
+import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.common.xcontent.XContentParser;
-import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
@@ -59,9 +57,8 @@ import com.floragunn.searchguard.action.configupdate.ConfigUpdateAction;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateNodeResponse;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateRequest;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateResponse;
-import com.floragunn.searchguard.auditlog.AuditLog;
 import com.floragunn.searchguard.configuration.AdminDNs;
-import com.floragunn.searchguard.configuration.ConfigurationLoader;
+import com.floragunn.searchguard.configuration.ConfigurationRepository;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
 import com.floragunn.searchguard.ssl.util.SSLRequestHelper;
@@ -70,7 +67,7 @@ import com.floragunn.searchguard.ssl.util.SSLRequestHelper.SSLInfo;
 public abstract class AbstractApiAction extends BaseRestHandler {
 
 	private final AdminDNs adminDNs;
-	private final ConfigurationLoader cl;
+	private final ConfigurationRepository cl;
 	private final ClusterService cs;
 	private final PrincipalExtractor principalExtractor;
 
@@ -79,7 +76,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	}
 
 	protected AbstractApiAction(final Settings settings, final RestController controller, final Client client,
-			final AdminDNs adminDNs, final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog,
+			final AdminDNs adminDNs, final ConfigurationRepository cl, final ClusterService cs,
 			final PrincipalExtractor principalExtractor) {
 		super(settings);
 		this.adminDNs = adminDNs;
@@ -189,14 +186,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	}
 
 	protected final Settings loadAsSettings(final String config) {
-		try {
-			return cl.load(new String[] { config }, 30, TimeUnit.SECONDS).get(config);
-		} catch (InterruptedException e) {
-			logger.error("Unable to retrieve configuration due to a thread interruption");
-		} catch (TimeoutException e) {
-			logger.error("Unable to retrieve configuration due to a timeout {}", e, e.toString());
-		}
-		return null;
+		return cl.getConfiguration(config);
 	}
 
 	protected void save(final Client client, final RestRequest request, final String config,
@@ -380,7 +370,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		}
 
 		try {
-			return Settings.builder().put(new JsonSettingsLoader(true).load(XContentHelper.createParser(ref))).build();
+			return Settings.builder().put(new JsonSettingsLoader(true).load(XContentHelper.createParser(NamedXContentRegistry.EMPTY, ref))).build();
 		} catch (final IOException e) {
 			throw ExceptionsHelper.convertToElastic(e);
 		}
@@ -392,7 +382,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		}
 
 		try {
-			return Settings.builder().put(new JsonSettingsLoader(true).load(XContentHelper.createParser(ref)));
+			return Settings.builder().put(new JsonSettingsLoader(true).load(XContentHelper.createParser(NamedXContentRegistry.EMPTY, ref)));
 		} catch (final IOException e) {
 			throw ExceptionsHelper.convertToElastic(e);
 		}
@@ -464,7 +454,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 	protected static String convertToYaml(BytesReference bytes, boolean prettyPrint) throws IOException {
 		try (XContentParser parser = XContentFactory.xContent(XContentFactory.xContentType(bytes))
-				.createParser(bytes.streamInput())) {
+				.createParser(NamedXContentRegistry.EMPTY, bytes.streamInput())) {
 			parser.nextToken();
 			XContentBuilder builder = XContentFactory.yamlBuilder();
 			if (prettyPrint) {

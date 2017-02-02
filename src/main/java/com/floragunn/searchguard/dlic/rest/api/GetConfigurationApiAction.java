@@ -29,9 +29,8 @@ import org.elasticsearch.rest.RestRequest.Method;
 import org.elasticsearch.rest.RestResponse;
 import org.elasticsearch.rest.RestStatus;
 
-import com.floragunn.searchguard.auditlog.AuditLog;
 import com.floragunn.searchguard.configuration.AdminDNs;
-import com.floragunn.searchguard.configuration.ConfigurationLoader;
+import com.floragunn.searchguard.configuration.IndexBaseConfigurationRepository;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.dlic.rest.validation.NoOpValidator;
 import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
@@ -42,9 +41,9 @@ public class GetConfigurationApiAction extends AbstractApiAction {
 
 	@Inject
 	public GetConfigurationApiAction(final Settings settings, final RestController controller, final Client client,
-			final AdminDNs adminDNs, final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog,
+			final AdminDNs adminDNs, final IndexBaseConfigurationRepository cl, final ClusterService cs,
             final PrincipalExtractor principalExtractor) {
-		super(settings, controller, client, adminDNs, cl, cs, auditLog, principalExtractor);
+		super(settings, controller, client, adminDNs, cl, cs, principalExtractor);
 		controller.registerHandler(Method.GET, "/_searchguard/api/configuration/{configname}", this);
 	}
 

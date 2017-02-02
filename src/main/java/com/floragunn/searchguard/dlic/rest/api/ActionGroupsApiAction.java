@@ -27,9 +27,8 @@ import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestRequest.Method;
 import org.elasticsearch.rest.RestResponse;
 
-import com.floragunn.searchguard.auditlog.AuditLog;
 import com.floragunn.searchguard.configuration.AdminDNs;
-import com.floragunn.searchguard.configuration.ConfigurationLoader;
+import com.floragunn.searchguard.configuration.IndexBaseConfigurationRepository;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.dlic.rest.validation.ActionGroupValidator;
 import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
@@ -39,9 +38,9 @@ public class ActionGroupsApiAction extends AbstractApiAction {
 
 	@Inject
 	public ActionGroupsApiAction(final Settings settings, final RestController controller, final Client client,
-			final AdminDNs adminDNs, final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog,
+			final AdminDNs adminDNs, final IndexBaseConfigurationRepository cl, final ClusterService cs,
             final PrincipalExtractor principalExtractor) {
-		super(settings, controller, client, adminDNs, cl, cs, auditLog, principalExtractor);
+		super(settings, controller, client, adminDNs, cl, cs, principalExtractor);
 		controller.registerHandler(Method.GET, "/_searchguard/api/actiongroup/{name}", this);
 		controller.registerHandler(Method.GET, "/_searchguard/api/actiongroup/", this);
 		controller.registerHandler(Method.DELETE, "/_searchguard/api/actiongroup/{name}", this);

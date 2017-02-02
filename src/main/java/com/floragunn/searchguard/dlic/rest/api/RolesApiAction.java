@@ -22,9 +22,8 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest.Method;
 
-import com.floragunn.searchguard.auditlog.AuditLog;
 import com.floragunn.searchguard.configuration.AdminDNs;
-import com.floragunn.searchguard.configuration.ConfigurationLoader;
+import com.floragunn.searchguard.configuration.IndexBaseConfigurationRepository;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.dlic.rest.validation.RolesValidator;
 import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
@@ -33,9 +32,9 @@ import com.floragunn.searchguard.support.ConfigConstants;
 public class RolesApiAction extends AbstractApiAction {
 
 	@Inject
-	public RolesApiAction(Settings settings, RestController controller, Client client, AdminDNs adminDNs, ConfigurationLoader cl,
-			ClusterService cs, AuditLog auditLog, final PrincipalExtractor principalExtractor) {
-		super(settings, controller, client, adminDNs, cl, cs, auditLog, principalExtractor);
+	public RolesApiAction(Settings settings, RestController controller, Client client, AdminDNs adminDNs, IndexBaseConfigurationRepository cl,
+			ClusterService cs, final PrincipalExtractor principalExtractor) {
+		super(settings, controller, client, adminDNs, cl, cs, principalExtractor);
 		controller.registerHandler(Method.GET, "/_searchguard/api/roles/", this);
 		controller.registerHandler(Method.GET, "/_searchguard/api/roles/{name}", this);
 		controller.registerHandler(Method.DELETE, "/_searchguard/api/roles/{name}", this);

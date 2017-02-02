@@ -29,6 +29,7 @@ import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.loader.JsonSettingsLoader;
+import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentHelper;
@@ -234,7 +235,7 @@ public abstract class AbstractConfigurationValidator {
 		}
 
 		try {
-			return Settings.builder().put(new JsonSettingsLoader(true).load(XContentHelper.createParser(ref)));
+			return Settings.builder().put(new JsonSettingsLoader(true).load(XContentHelper.createParser(NamedXContentRegistry.EMPTY, ref)));
 		} catch (final IOException e) {
 			throw ExceptionsHelper.convertToElastic(e);
 		}

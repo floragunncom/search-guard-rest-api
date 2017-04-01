@@ -39,12 +39,16 @@ sg_role_starfleet:
          - READ
        'admin*':  
          - READ
+       '*':
+         - '*bulk*'  
     'pub*':
        '*':  
-         - READ  
+         - READ
+      
   cluster:
     - 'cluster:monitor*'
     - indices:data/read/scroll
+    - '*bulk*'
 
 sg_role_starfleet_captains:
   indices:
@@ -56,6 +60,7 @@ sg_role_starfleet_captains:
          - CRUD 
   cluster:
     - 'cluster:monitor*'
+    - '*bulk*'
 
 sg_flsdls:
   cluster:

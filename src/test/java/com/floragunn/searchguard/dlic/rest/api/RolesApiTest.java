@@ -47,7 +47,7 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		Settings settings = Settings.builder().loadFromSource(response.getBody()).build();
 		Map<String, String> settingsAsMap = settings.getAsMap();
-		Assert.assertEquals(8, settingsAsMap.size());
+		Assert.assertEquals(10, settingsAsMap.size());
 
 		// GET, role does not exist
 		response = rh.executeGetRequest("/_searchguard/api/roles/nothinghthere", new Header[0]);

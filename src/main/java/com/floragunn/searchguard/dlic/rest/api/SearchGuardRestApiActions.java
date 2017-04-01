@@ -18,17 +18,26 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import org.elasticsearch.client.Client;
+import org.elasticsearch.cluster.service.ClusterService;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestHandler;
+
+import com.floragunn.searchguard.configuration.AdminDNs;
+import com.floragunn.searchguard.configuration.IndexBaseConfigurationRepository;
+import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
 
 public class SearchGuardRestApiActions {
 
-	public static Collection<Class<? extends RestHandler>> getHandler() {
-	    List<Class<? extends RestHandler>> handlers = new ArrayList<Class<? extends RestHandler>>(5);
-	    handlers.add(UserApiAction.class);
-	    handlers.add(RolesMappingApiAction.class);
-	    handlers.add(RolesApiAction.class);
-	    handlers.add(ActionGroupsApiAction.class);
-	    handlers.add(GetConfigurationApiAction.class);
+	public static Collection<RestHandler> getHandler(Settings settings, RestController controller, Client client, 
+	        AdminDNs adminDns, IndexBaseConfigurationRepository cr, ClusterService cs, PrincipalExtractor principalExtractor) {
+	    final List<RestHandler> handlers = new ArrayList<RestHandler>(5);
+	    handlers.add(new UserApiAction(settings, controller, client, adminDns, cr, cs, principalExtractor));
+	    handlers.add(new RolesMappingApiAction(settings, controller, client, adminDns, cr, cs, principalExtractor));
+	    handlers.add(new RolesApiAction(settings, controller, client, adminDns, cr, cs, principalExtractor));
+	    handlers.add(new ActionGroupsApiAction(settings, controller, client, adminDns, cr, cs, principalExtractor));
+	    handlers.add(new GetConfigurationApiAction(settings, controller, client, adminDns, cr, cs, principalExtractor));
 	    return Collections.unmodifiableCollection(handlers);
 	}
 }

@@ -105,7 +105,7 @@ public abstract class AbstractConfigurationValidator {
 
 		Settings settings = settingsBuilder.build();
 
-		Set<String> requested = settings.names();
+		Set<String> requested = new HashSet<String>(settings.names());
 		// check if payload is accepted at all
 		if (!this.payloadAllowed && !requested.isEmpty()) {
 			this.errorType = ErrorType.PAYLOAD_NOT_ALLOWED;

@@ -36,6 +36,7 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.collect.Tuple;
+import org.elasticsearch.common.inject.Provider;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.common.settings.loader.JsonSettingsLoader;
@@ -57,9 +58,11 @@ import com.floragunn.searchguard.action.configupdate.ConfigUpdateAction;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateRequest;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateResponse;
 import com.floragunn.searchguard.auditlog.AuditLog;
+import com.floragunn.searchguard.auth.BackendRegistry;
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.ConfigurationLoader;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
+import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator.ErrorType;
 import com.floragunn.searchguard.support.ConfigConstants;
 import com.floragunn.searchguard.user.User;
 
@@ -68,17 +71,20 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	private final AdminDNs adminDNs;
 	private final ConfigurationLoader cl;
 	private final ClusterService cs;
-
+	protected final Provider<BackendRegistry> backendRegistryProvider;
+	
 	static {
 		printLicenseInfo();
 	}
 
 	protected AbstractApiAction(final Settings settings, final RestController controller, final Client client,
-			final AdminDNs adminDNs, final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog) {
+			final AdminDNs adminDNs, final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog,
+			final Provider<BackendRegistry> backendRegistryProvider) {
 		super(settings, controller, client);
 		this.adminDNs = adminDNs;
 		this.cl = cl;
 		this.cs = cs;
+		this.backendRegistryProvider = backendRegistryProvider;
 	}
 
 	protected abstract AbstractConfigurationValidator getValidator(final Method method, BytesReference ref);
@@ -89,6 +95,11 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 	protected Tuple<String[], RestResponse> handleApiRequest(final RestRequest request, final Client client)
 			throws Throwable {
+		
+		// check if SG index has been initialized
+		if(!backendRegistryProvider.get().isInitialized()) {
+			return badRequestResponse(ErrorType.SG_NOT_INITIALIZED.getMessage());
+		}
 
 		// validate additional settings, if any
 		AbstractConfigurationValidator validator = getValidator(request.method(), request.content());

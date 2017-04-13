@@ -21,6 +21,7 @@ import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.inject.Inject;
+import org.elasticsearch.common.inject.Provider;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
@@ -30,6 +31,7 @@ import org.elasticsearch.rest.RestResponse;
 import org.elasticsearch.rest.RestStatus;
 
 import com.floragunn.searchguard.auditlog.AuditLog;
+import com.floragunn.searchguard.auth.BackendRegistry;
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.ConfigurationLoader;
 import com.floragunn.searchguard.configuration.ConfigurationService;
@@ -41,8 +43,9 @@ public class GetConfigurationApiAction extends AbstractApiAction {
 
 	@Inject
 	public GetConfigurationApiAction(final Settings settings, final RestController controller, final Client client,
-			final AdminDNs adminDNs, final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog) {
-		super(settings, controller, client, adminDNs, cl, cs, auditLog);
+			final AdminDNs adminDNs, final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog,
+			final Provider<BackendRegistry> backendRegistryProvider) {
+		super(settings, controller, client, adminDNs, cl, cs, auditLog, backendRegistryProvider);
 		controller.registerHandler(Method.GET, "/_searchguard/api/configuration/{configname}", this);
 	}
 

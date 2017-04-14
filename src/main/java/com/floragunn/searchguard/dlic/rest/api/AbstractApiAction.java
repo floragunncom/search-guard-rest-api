@@ -419,6 +419,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		return success;
 	}
 
+	/*
 	protected static Settings toSettings(final BytesReference ref) {
 		if (ref == null || ref.length() == 0) {
 			throw new ElasticsearchException("ref invalid");
@@ -441,7 +442,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		} catch (final IOException e) {
 			throw ExceptionsHelper.convertToElastic(e);
 		}
-	}
+	}*/
 
 	protected Settings.Builder copyKeysStartingWith(final Map<String, String> map, final String startWith) {
 		if (map == null || map.isEmpty() || startWith == null || startWith.isEmpty()) {

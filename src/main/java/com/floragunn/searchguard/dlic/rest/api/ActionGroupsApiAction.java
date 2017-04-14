@@ -40,7 +40,7 @@ public class ActionGroupsApiAction extends AbstractApiAction {
 	@Inject
 	public ActionGroupsApiAction(final Settings settings, final RestController controller, final Client client,
 			final AdminDNs adminDNs, final ConfigurationLoader cl, final ClusterService cs, final AuditLog auditLog,
-            final PrincipalExtractor principalExtractor) {
+			final PrincipalExtractor principalExtractor) {
 		super(settings, controller, client, adminDNs, cl, cs, auditLog, principalExtractor);
 		controller.registerHandler(Method.GET, "/_searchguard/api/actiongroup/{name}", this);
 		controller.registerHandler(Method.GET, "/_searchguard/api/actiongroup/", this);

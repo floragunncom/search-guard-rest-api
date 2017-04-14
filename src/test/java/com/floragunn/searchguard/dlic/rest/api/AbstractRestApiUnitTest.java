@@ -50,7 +50,7 @@ import com.floragunn.searchguard.test.helper.rest.RestHelper.HttpResponse;
 public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
 
 	protected void setup() throws Exception {
-		setup(ClusterConfiguration.SINGLENODE);
+		setup(ClusterConfiguration.DEFAULT);
 	}
 
 	protected void setup(ClusterConfiguration configuration) throws Exception {
@@ -61,7 +61,7 @@ public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
 		log.debug("Started nodes");
 
 		log.debug("Setup index");
-		setupSearchGuardIndex();
+		setupAndInitializeSearchGuardIndex();
 		log.debug("Setup done");
 
 		RestHelper rh = new RestHelper(ci);
@@ -162,8 +162,30 @@ public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
 		rh.executePutRequest("sf/public/0", "{\"some\" : \"value\"}", new Header[0]);
 		rh.sendHTTPClientCertificate = sendHTTPClientCertificate;
 	}
-
+	
 	protected void setupSearchGuardIndex() {
+		Settings tcSettings = Settings.builder().put("cluster.name", ClusterHelper.clustername)
+				.put(defaultNodeSettings(false))
+				.put("searchguard.ssl.transport.keystore_filepath",
+						FileHelper.getAbsoluteFilePathFromClassPath("kirk-keystore.jks"))
+				.put(SSLConfigConstants.SEARCHGUARD_SSL_TRANSPORT_KEYSTORE_ALIAS, "kirk").put("path.home", ".").build();
+
+		try (TransportClient tc = new TransportClientImpl(tcSettings,asCollection(Netty4Plugin.class, SearchGuardPlugin.class))) {
+
+			log.debug("Start transport client to init");
+
+			tc.addTransportAddress(new InetSocketTransportAddress(new InetSocketAddress(ci.nodeHost, ci.nodePort)));
+			Assert.assertEquals(ci.numNodes,
+					tc.admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().size());
+
+			tc.admin().indices().create(new CreateIndexRequest("searchguard")).actionGet();
+
+
+		}
+		
+	}
+	
+	protected void setupAndInitializeSearchGuardIndex() {
 		Settings tcSettings = Settings.builder().put("cluster.name", ClusterHelper.clustername)
 				.put(defaultNodeSettings(false))
 				.put("searchguard.ssl.transport.keystore_filepath",
@@ -196,7 +218,7 @@ public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
 					.actionGet();
 			Assert.assertEquals(ci.numNodes, cur.getNodes().size());
 
-		}
+		}	
 	}
 
 	protected Settings defaultNodeSettings(boolean enableRestSSL) {

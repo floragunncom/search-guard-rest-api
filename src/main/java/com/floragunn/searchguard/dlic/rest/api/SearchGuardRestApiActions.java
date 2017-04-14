@@ -23,12 +23,13 @@ import org.elasticsearch.rest.RestHandler;
 public class SearchGuardRestApiActions {
 
 	public static Collection<Class<? extends RestHandler>> getHandler() {
-	    List<Class<? extends RestHandler>> handlers = new ArrayList<Class<? extends RestHandler>>(5);
+	    List<Class<? extends RestHandler>> handlers = new ArrayList<Class<? extends RestHandler>>(6);
 	    handlers.add(UserApiAction.class);
 	    handlers.add(RolesMappingApiAction.class);
 	    handlers.add(RolesApiAction.class);
 	    handlers.add(ActionGroupsApiAction.class);
 	    handlers.add(GetConfigurationApiAction.class);
+	    handlers.add(FlushCacheApiAction.class);
 	    return Collections.unmodifiableCollection(handlers);
 	}
 }

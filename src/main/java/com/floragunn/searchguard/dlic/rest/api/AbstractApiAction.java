@@ -503,8 +503,12 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		return response(RestStatus.NOT_FOUND, RestStatus.NOT_FOUND.name(), message);
 	}
 
+	protected Tuple<String[], RestResponse> internalErrorResponse(String message) {
+		return response(RestStatus.INTERNAL_SERVER_ERROR, RestStatus.INTERNAL_SERVER_ERROR.name(), message);
+	}
+	
 	protected Tuple<String[], RestResponse> notImplemented(Method method) {
-		return badRequestResponse("Method " + method.name() + " not supported for this action.");
+		return response(RestStatus.NOT_IMPLEMENTED, RestStatus.NOT_IMPLEMENTED.name(), "Method " + method.name() + " not supported for this action.");
 	}
 
 	public static void printLicenseInfo() {

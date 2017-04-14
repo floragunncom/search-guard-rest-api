@@ -37,7 +37,6 @@ import org.elasticsearch.node.PluginAwareNode;
 import org.elasticsearch.transport.Netty4Plugin;
 
 import com.floragunn.searchguard.SearchGuardPlugin;
-import com.floragunn.searchguard.ssl.SearchGuardSSLPlugin;
 import com.floragunn.searchguard.test.helper.cluster.ClusterConfiguration.NodeSettings;
 
 public class ClusterHelper {

@@ -17,6 +17,7 @@ package com.floragunn.dlic.rest.api;
 import org.elasticsearch.rest.RestModule;
 
 import com.floragunn.searchguard.dlic.rest.api.ActionGroupsApiAction;
+import com.floragunn.searchguard.dlic.rest.api.FlushCacheApiAction;
 import com.floragunn.searchguard.dlic.rest.api.GetConfigurationApiAction;
 import com.floragunn.searchguard.dlic.rest.api.RolesApiAction;
 import com.floragunn.searchguard.dlic.rest.api.RolesMappingApiAction;
@@ -30,5 +31,6 @@ public class SearchGuardRestApiActions {
 		module.addRestAction(RolesApiAction.class);
 		module.addRestAction(ActionGroupsApiAction.class);
 		module.addRestAction(GetConfigurationApiAction.class);
+		module.addRestAction(FlushCacheApiAction.class);
 	}
 }

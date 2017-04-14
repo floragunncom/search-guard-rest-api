@@ -24,7 +24,7 @@ public class RolesValidator extends AbstractConfigurationValidator {
 		this.payloadMandatory = true;
 		allowedKeys.put("indices", DataType.OBJECT);
 		allowedKeys.put("cluster", DataType.ARRAY);
-
+		allowedKeys.put("tenants", DataType.OBJECT);
 		mandatoryOrKeys.add("indices");
 		mandatoryOrKeys.add("cluster");
 	}

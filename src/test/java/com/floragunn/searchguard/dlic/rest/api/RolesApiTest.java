@@ -23,6 +23,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
+import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator.ErrorType;
 import com.floragunn.searchguard.test.helper.file.FileHelper;
 import com.floragunn.searchguard.test.helper.rest.RestHelper.HttpResponse;
 
@@ -163,5 +164,70 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
 		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet_captains",
 				FileHelper.loadFile("roles_multiple_2.json"), new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+		
+		// check tenants
+		rh.sendHTTPClientCertificate = true;
+		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet_captains",
+				FileHelper.loadFile("roles_captains_tenants.json"), new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settingsAsMap = settings.getAsMap();
+		Assert.assertEquals(2, settingsAsMap.size());
+		Assert.assertEquals(settingsAsMap.get("status"), "OK");
+		
+		
+		response = rh.executeGetRequest("/_searchguard/api/roles/sg_role_starfleet_captains", new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settingsAsMap = settings.getAsMap();
+		Assert.assertEquals(5, settingsAsMap.size());
+		Assert.assertEquals(settingsAsMap.get("sg_role_starfleet_captains.tenants.tenant1"), "RO");
+		Assert.assertEquals(settingsAsMap.get("sg_role_starfleet_captains.tenants.tenant2"), "RW");
+
+		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet_captains",
+				FileHelper.loadFile("roles_captains_tenants2.json"), new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settingsAsMap = settings.getAsMap();
+		Assert.assertEquals(2, settingsAsMap.size());
+		Assert.assertEquals(settingsAsMap.get("status"), "OK");
+
+		response = rh.executeGetRequest("/_searchguard/api/roles/sg_role_starfleet_captains", new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settingsAsMap = settings.getAsMap();
+		Assert.assertEquals(7, settingsAsMap.size());
+		Assert.assertEquals(settingsAsMap.get("sg_role_starfleet_captains.tenants.tenant1"), "RO");
+		Assert.assertEquals(settingsAsMap.get("sg_role_starfleet_captains.tenants.tenant2"), "RW");
+		Assert.assertEquals(settingsAsMap.get("sg_role_starfleet_captains.tenants.tenant3"), "RO");
+		Assert.assertEquals(settingsAsMap.get("sg_role_starfleet_captains.tenants.tenant4"), "RW");
+		
+		// remove tenants from role
+		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet_captains",
+				FileHelper.loadFile("roles_captains_no_tenants.json"), new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settingsAsMap = settings.getAsMap();
+		Assert.assertEquals(2, settingsAsMap.size());
+		Assert.assertEquals(settingsAsMap.get("status"), "OK");
+
+		response = rh.executeGetRequest("/_searchguard/api/roles/sg_role_starfleet_captains", new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settingsAsMap = settings.getAsMap();
+		Assert.assertEquals(3, settingsAsMap.size());	
+		Assert.assertNull(settingsAsMap.get("sg_role_starfleet_captains.tenants.tenant1"));
+		Assert.assertNull(settingsAsMap.get("sg_role_starfleet_captains.tenants.tenant2"));
+		Assert.assertNull(settingsAsMap.get("sg_role_starfleet_captains.tenants.tenant3"));
+		Assert.assertNull(settingsAsMap.get("sg_role_starfleet_captains.tenants.tenant4"));
+
+		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet_captains",
+				FileHelper.loadFile("roles_captains_tenants_malformed.json"), new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settingsAsMap = settings.getAsMap();
+		Assert.assertEquals(settingsAsMap.get("status"), "error");
+		Assert.assertEquals(settingsAsMap.get("reason"), ErrorType.INVALID_CONFIGURATION.getMessage());
+
 	}
 }

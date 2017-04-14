@@ -81,4 +81,10 @@ public class GetConfigurationApiAction extends AbstractApiAction {
 		// GET is handled by this class directly
 		return null;
 	}
+
+	@Override
+	protected void consumeParameters(final RestRequest request) {
+		request.param("configname");
+	}
+
 }

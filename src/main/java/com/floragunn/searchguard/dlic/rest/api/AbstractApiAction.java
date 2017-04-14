@@ -28,6 +28,9 @@ import java.util.concurrent.TimeUnit;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsAction;
+import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequest;
+import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.support.WriteRequest.RefreshPolicy;
@@ -60,16 +63,19 @@ import com.floragunn.searchguard.action.configupdate.ConfigUpdateResponse;
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.ConfigurationRepository;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
+import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator.ErrorType;
 import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
 import com.floragunn.searchguard.ssl.util.SSLRequestHelper;
 import com.floragunn.searchguard.ssl.util.SSLRequestHelper.SSLInfo;
+import com.floragunn.searchguard.support.ConfigConstants;
 
 public abstract class AbstractApiAction extends BaseRestHandler {
 
 	private final AdminDNs adminDNs;
-	private final ConfigurationRepository cl;
+	protected final ConfigurationRepository cl;
 	private final ClusterService cs;
 	private final PrincipalExtractor principalExtractor;
+	private String searchguardIndex;
 
 	static {
 		printLicenseInfo();
@@ -79,6 +85,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			final AdminDNs adminDNs, final ConfigurationRepository cl, final ClusterService cs,
 			final PrincipalExtractor principalExtractor) {
 		super(settings);
+		this.searchguardIndex = settings.get(ConfigConstants.SG_CONFIG_INDEX, ConfigConstants.SG_DEFAULT_CONFIG_INDEX);
 		this.adminDNs = adminDNs;
 		this.cl = cl;
 		this.cs = cs;
@@ -90,9 +97,17 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	protected abstract String getResourceName();
 
 	protected abstract String getConfigName();
-
+	
 	protected Tuple<String[], RestResponse> handleApiRequest(final RestRequest request, final Client client)
 			throws Throwable {
+		
+		// consume all parameters first so we can return a correct HTTP status, not 400
+		consumeParameters(request);
+		
+		// check if SG index has been initialized
+		if(!ensureIndexExists(client)) {
+			return internalErrorResponse(ErrorType.SG_NOT_INITIALIZED.getMessage());			
+		}
 
 		// validate additional settings, if any
 		AbstractConfigurationValidator validator = getValidator(request.method(), request.content());
@@ -112,7 +127,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			return handleGet(request, client, validator.settingsBuilder());
 		default:
 			throw new IllegalArgumentException(request.method() + " not supported");
-		}
+		}		 
 	}
 
 	protected Tuple<String[], RestResponse> handleDelete(final RestRequest request, final Client client,
@@ -189,11 +204,51 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		return cl.getConfiguration(config);
 	}
 
+    protected boolean ensureIndexExists(final Client client) throws Throwable {
+        IndicesExistsRequest ier = new IndicesExistsRequest(this.searchguardIndex);
+		final Semaphore sem = new Semaphore(0);
+		final List<Throwable> exception = new ArrayList<Throwable>(1);
+		final Boolean[] exists = new Boolean[] {Boolean.FALSE};
+		
+		client.execute(
+				IndicesExistsAction.INSTANCE,
+				ier,
+				new ActionListener<IndicesExistsResponse>() {
+
+					@Override
+					public void onResponse(IndicesExistsResponse response) {
+						sem.release();
+						exists[0] = response.isExists();
+					}
+
+					@Override
+					public void onFailure(Exception e) {
+						sem.release();
+						exception.add(e);
+						logger.error("Failed to get Search Guard index due to {}", e);
+					}
+
+				}
+		);
+
+		if (!sem.tryAcquire(30, TimeUnit.SECONDS)) {
+			logger.error("Failed to get Search Guard index due to timeout");
+			return false;
+		}
+
+		if (exception.size() > 0) {
+			logger.error("Failed to get Search Guard index due to "+ exception.get(0).getMessage());
+			return false;
+		}		
+		
+		return exists[0];
+    }
+    
 	protected void save(final Client client, final RestRequest request, final String config,
 			final Settings.Builder settings) throws Throwable {
 		final Semaphore sem = new Semaphore(0);
 		final List<Throwable> exception = new ArrayList<Throwable>(1);
-		final IndexRequest ir = new IndexRequest("searchguard");
+		final IndexRequest ir = new IndexRequest(this.searchguardIndex);
 		//ir.putInContext(ConfigConstants.SG_USER,
 		//		new User((String) request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL)));
 
@@ -216,7 +271,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 					}
 				});
 
-		if (!sem.tryAcquire(2, TimeUnit.MINUTES)) {
+		if (!sem.tryAcquire(30, TimeUnit.SECONDS)) {
 			// timeout
 			logger.error("Cannot update {} due to timeout}", config);
 			throw new ElasticsearchException("Timeout updating " + config);
@@ -507,8 +562,24 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		return response(RestStatus.NOT_FOUND, RestStatus.NOT_FOUND.name(), message);
 	}
 
+	protected Tuple<String[], RestResponse> internalErrorResponse(String message) {
+		return response(RestStatus.INTERNAL_SERVER_ERROR, RestStatus.INTERNAL_SERVER_ERROR.name(), message);
+	}
+	
 	protected Tuple<String[], RestResponse> notImplemented(Method method) {
-		return badRequestResponse("Method " + method.name() + " not supported for this action.");
+		return response(RestStatus.NOT_IMPLEMENTED, RestStatus.NOT_IMPLEMENTED.name(), "Method " + method.name() + " not supported for this action.");
+	}
+	
+	/**
+	 * Consume all defined parameters for the request. Before we handle the request
+	 * in subclasses where we actually need the parameter, some global checks are
+	 * performed, e.g. check whether the SG index exists. Thus, the parameter(s)
+	 * have not been consumed, and ES will always return a 400 with an internal error message.
+	 * 
+	 * @param request
+	 */
+	protected void consumeParameters(final RestRequest request) {
+		request.param("name");
 	}
 
 	public static void printLicenseInfo() {

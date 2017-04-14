@@ -40,7 +40,7 @@ public class UserApiAction extends AbstractApiAction {
 	@Inject
 	public UserApiAction(final Settings settings, final RestController controller, final Client client,
 			final AdminDNs adminDNs, final IndexBaseConfigurationRepository cl, final ClusterService cs,
-            final PrincipalExtractor principalExtractor) {
+			final PrincipalExtractor principalExtractor) {
 		super(settings, controller, client, adminDNs, cl, cs, principalExtractor);
 		controller.registerHandler(Method.GET, "/_searchguard/api/user/{name}", this);
 		controller.registerHandler(Method.GET, "/_searchguard/api/user/", this);

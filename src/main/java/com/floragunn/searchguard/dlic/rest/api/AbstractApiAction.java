@@ -268,7 +268,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 					}
 				});
 
-		if (!sem.tryAcquire(30, TimeUnit.SECONDS)) {
+		if (!sem.tryAcquire(2, TimeUnit.MINUTES)) {
 			// timeout
 			logger.error("Cannot update {} due to timeout}", config);
 			throw new ElasticsearchException("Timeout updating " + config);

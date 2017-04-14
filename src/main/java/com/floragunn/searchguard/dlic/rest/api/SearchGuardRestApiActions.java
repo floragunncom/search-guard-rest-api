@@ -23,5 +23,6 @@ public class SearchGuardRestApiActions {
 		module.addRestAction(RolesApiAction.class);
 		module.addRestAction(ActionGroupsApiAction.class);
 		module.addRestAction(GetConfigurationApiAction.class);
+		module.addRestAction(FlushCacheApiAction.class);
 	}
 }

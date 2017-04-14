@@ -14,15 +14,6 @@
 
 package com.floragunn.searchguard.test.helper.content;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.StringReader;
-
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
-import org.elasticsearch.common.xcontent.XContentParser;
-import org.elasticsearch.common.xcontent.XContentType;
-
 public class ContentHelper {
 
 	/*public static XContentBuilder parseJsonContent(final String jsonContent) {

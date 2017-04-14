@@ -19,6 +19,7 @@ import java.util.Map;
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -42,7 +43,7 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		HttpResponse response = rh
 				.executeGetRequest("_searchguard/api/configuration/" + ConfigConstants.CONFIGNAME_INTERNAL_USERS);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-		Settings settings = Settings.builder().loadFromSource(response.getBody()).build();
+		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(settings.getAsMap().size(), 2);
 
 		// --- GET
@@ -50,7 +51,7 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		// GET, user admin, exists
 		response = rh.executeGetRequest("/_searchguard/api/user/admin", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Map<String, String> settingsAsMap = settings.getAsMap();
 		Assert.assertEquals(1, settingsAsMap.size());
 		Assert.assertEquals("$2a$12$VcCDgh2NDk07JGN0rjGbM.Ad41qVR/YFJcgHp0UGns5JDymv..TOG",
@@ -81,21 +82,21 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		response = rh.executePutRequest("/_searchguard/api/user/nagilum", "{some: \"thing\" asd  other: \"thing\"}",
 				new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
-		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(settings.get("reason"), AbstractConfigurationValidator.ErrorType.BODY_NOT_PARSEABLE.getMessage());
 
 		// Missing quotes in JSON
 		response = rh.executePutRequest("/_searchguard/api/user/nagilum", "{some: \"thing\", other: \"thing\"}",
 				new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
-		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.BODY_NOT_PARSEABLE.getMessage(), settings.get("reason"));
 
 		// Wrong config keys
 		response = rh.executePutRequest("/_searchguard/api/user/nagilum", "{\"some\": \"thing\", \"other\": \"thing\"}",
 				new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
-		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(settings.get("reason"), AbstractConfigurationValidator.ErrorType.INVALID_CONFIGURATION.getMessage());
 		Assert.assertTrue(settings.get(AbstractConfigurationValidator.INVALID_KEYS_KEY + ".keys").contains("some"));
 		Assert.assertTrue(settings.get(AbstractConfigurationValidator.INVALID_KEYS_KEY + ".keys").contains("other"));
@@ -150,7 +151,7 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		// wrong datatypes in roles file
 		rh.sendHTTPClientCertificate = true;
 		response = rh.executePutRequest("/_searchguard/api/user/picard", FileHelper.loadFile("users_wrong_datatypes.json"), new Header[0]);
-		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.WRONG_DATATYPE.getMessage(), settings.get("reason"));
 		Assert.assertTrue(settings.get("roles").equals("Array expected"));
@@ -158,7 +159,7 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 
 		rh.sendHTTPClientCertificate = true;
 		response = rh.executePutRequest("/_searchguard/api/user/picard", FileHelper.loadFile("users_wrong_datatypes.json"), new Header[0]);
-		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.WRONG_DATATYPE.getMessage(), settings.get("reason"));
 		Assert.assertTrue(settings.get("roles").equals("Array expected"));
@@ -166,7 +167,7 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		
 		rh.sendHTTPClientCertificate = true;
 		response = rh.executePutRequest("/_searchguard/api/user/picard", FileHelper.loadFile("users_wrong_datatypes2.json"), new Header[0]);
-		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.WRONG_DATATYPE.getMessage(), settings.get("reason"));
 		Assert.assertTrue(settings.get("password").equals("String expected"));
@@ -175,7 +176,7 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 
 		rh.sendHTTPClientCertificate = true;
 		response = rh.executePutRequest("/_searchguard/api/user/picard", FileHelper.loadFile("users_wrong_datatypes3.json"), new Header[0]);
-		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.WRONG_DATATYPE.getMessage(), settings.get("reason"));
 		Assert.assertTrue(settings.get("roles").equals("Array expected"));
@@ -209,7 +210,7 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		rh.sendHTTPClientCertificate = true;
 		response = rh.executeGetRequest("/_searchguard/api/user/picard", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		settingsAsMap = settings.getAsMap();
 		Assert.assertEquals(3, settingsAsMap.size());
 		Assert.assertNotEquals(null, Strings.emptyToNull(settingsAsMap.get("picard.hash")));

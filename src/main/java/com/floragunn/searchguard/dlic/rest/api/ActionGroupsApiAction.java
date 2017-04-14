@@ -88,4 +88,9 @@ public class ActionGroupsApiAction extends AbstractApiAction {
 		return ConfigConstants.CONFIGNAME_ACTION_GROUPS;
 	}
 
+	@Override
+	protected void consumeParameters(final RestRequest request) {
+		request.param("name");		
+	}
+
 }

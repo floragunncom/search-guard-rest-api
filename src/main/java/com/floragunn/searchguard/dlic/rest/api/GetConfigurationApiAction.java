@@ -33,6 +33,7 @@ import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.IndexBaseConfigurationRepository;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.dlic.rest.validation.NoOpValidator;
+import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator.ErrorType;
 import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
 import com.floragunn.searchguard.support.ConfigConstants;
 import com.google.common.base.Joiner;
@@ -47,9 +48,11 @@ public class GetConfigurationApiAction extends AbstractApiAction {
 		controller.registerHandler(Method.GET, "/_searchguard/api/configuration/{configname}", this);
 	}
 
+	
 	@Override
 	protected Tuple<String[], RestResponse> handleGet(RestRequest request, Client client,
 			final Settings.Builder additionalSettingsBuilder) throws Throwable {
+		
 		final String configname = request.param("configname");
 
 		if (configname == null || configname.length() == 0
@@ -60,7 +63,7 @@ public class GetConfigurationApiAction extends AbstractApiAction {
 		}
 
 		final Settings config = loadAsSettings(configname);
-
+		
 		return new Tuple<String[], RestResponse>(new String[0],
 				new BytesRestResponse(RestStatus.OK, convertToJson(config)));
 	}
@@ -81,4 +84,10 @@ public class GetConfigurationApiAction extends AbstractApiAction {
 		// GET is handled by this class directly
 		return null;
 	}
+
+	@Override
+	protected void consumeParameters(final RestRequest request) {
+		request.param("configname");
+	}
+
 }

@@ -253,8 +253,9 @@ public abstract class AbstractConfigurationValidator {
 		WRONG_DATATYPE("Wrong datatype"),
 		BODY_NOT_PARSEABLE("Could not parse content of request."),
 		PAYLOAD_NOT_ALLOWED("Request body not allowed for this action."),
-		PAYLOAD_MANDATORY("Request body required for this action.");
-
+		PAYLOAD_MANDATORY("Request body required for this action."),
+		SG_NOT_INITIALIZED("Search Guard index not initialized (SG11)");
+		
 		private String message;
 
 		private ErrorType(String message) {

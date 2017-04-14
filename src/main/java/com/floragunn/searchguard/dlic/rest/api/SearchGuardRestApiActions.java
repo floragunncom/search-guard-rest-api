@@ -32,12 +32,13 @@ public class SearchGuardRestApiActions {
 
 	public static Collection<RestHandler> getHandler(Settings settings, RestController controller, Client client, 
 	        AdminDNs adminDns, IndexBaseConfigurationRepository cr, ClusterService cs, PrincipalExtractor principalExtractor) {
-	    final List<RestHandler> handlers = new ArrayList<RestHandler>(5);
+	    final List<RestHandler> handlers = new ArrayList<RestHandler>(6);
 	    handlers.add(new UserApiAction(settings, controller, client, adminDns, cr, cs, principalExtractor));
 	    handlers.add(new RolesMappingApiAction(settings, controller, client, adminDns, cr, cs, principalExtractor));
 	    handlers.add(new RolesApiAction(settings, controller, client, adminDns, cr, cs, principalExtractor));
 	    handlers.add(new ActionGroupsApiAction(settings, controller, client, adminDns, cr, cs, principalExtractor));
 	    handlers.add(new GetConfigurationApiAction(settings, controller, client, adminDns, cr, cs, principalExtractor));
+	    handlers.add(new FlushCacheApiAction(settings, controller, client, adminDns, cr, cs, principalExtractor));
 	    return Collections.unmodifiableCollection(handlers);
 	}
 }

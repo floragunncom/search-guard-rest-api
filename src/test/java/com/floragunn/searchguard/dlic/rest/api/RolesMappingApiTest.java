@@ -19,6 +19,7 @@ import java.util.Map;
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -45,7 +46,7 @@ public class RolesMappingApiTest extends AbstractRestApiUnitTest {
 		// GET sg_role_starfleet, exists
 		response = rh.executeGetRequest("/_searchguard/api/rolesmapping/sg_role_starfleet", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-		Settings settings = Settings.builder().loadFromSource(response.getBody()).build();
+		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Map<String, String> settingsAsMap = settings.getAsMap();
 		Assert.assertEquals(5, settingsAsMap.size());
 		Assert.assertEquals("starfleet", settingsAsMap.get("sg_role_starfleet.backendroles.0"));
@@ -108,20 +109,20 @@ public class RolesMappingApiTest extends AbstractRestApiUnitTest {
 		// put with empty mapping, must fail
 		response = rh.executePutRequest("/_searchguard/api/rolesmapping/sg_role_starfleet_captains", "", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
-		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.PAYLOAD_MANDATORY.getMessage(), settings.get("reason"));
 
 		// put new configuration with invalid payload, must fail
 		response = rh.executePutRequest("/_searchguard/api/rolesmapping/sg_role_starfleet_captains",
 				FileHelper.loadFile("rolesmapping_not_parseable.json"), new Header[0]);
-		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.BODY_NOT_PARSEABLE.getMessage(), settings.get("reason"));
 
 		// put new configuration with invalid keys, must fail
 		response = rh.executePutRequest("/_searchguard/api/rolesmapping/sg_role_starfleet_captains",
 				FileHelper.loadFile("rolesmapping_invalid_keys.json"), new Header[0]);
-		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.INVALID_CONFIGURATION.getMessage(), settings.get("reason"));
 		Assert.assertTrue(settings.get(AbstractConfigurationValidator.INVALID_KEYS_KEY + ".keys").contains("theusers"));
@@ -132,7 +133,7 @@ public class RolesMappingApiTest extends AbstractRestApiUnitTest {
 		// wrong datatypes
 		response = rh.executePutRequest("/_searchguard/api/rolesmapping/sg_role_starfleet_captains",
 				FileHelper.loadFile("rolesmapping_backendroles_captains_single_wrong_datatype.json"), new Header[0]);
-		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.WRONG_DATATYPE.getMessage(), settings.get("reason"));
 		Assert.assertTrue(settings.get("backendroles").equals("Array expected"));		
@@ -141,7 +142,7 @@ public class RolesMappingApiTest extends AbstractRestApiUnitTest {
 
 		response = rh.executePutRequest("/_searchguard/api/rolesmapping/sg_role_starfleet_captains",
 				FileHelper.loadFile("rolesmapping_hosts_single_wrong_datatype.json"), new Header[0]);
-		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.WRONG_DATATYPE.getMessage(), settings.get("reason"));
 		Assert.assertTrue(settings.get("hosts").equals("Array expected"));		
@@ -150,7 +151,7 @@ public class RolesMappingApiTest extends AbstractRestApiUnitTest {
 
 		response = rh.executePutRequest("/_searchguard/api/rolesmapping/sg_role_starfleet_captains",
 				FileHelper.loadFile("rolesmapping_users_picard_single_wrong_datatype.json"), new Header[0]);
-		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.WRONG_DATATYPE.getMessage(), settings.get("reason"));
 		Assert.assertTrue(settings.get("hosts").equals("Array expected"));		

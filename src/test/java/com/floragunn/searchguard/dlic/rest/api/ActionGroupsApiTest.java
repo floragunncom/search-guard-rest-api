@@ -19,6 +19,7 @@ import java.util.Map;
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -41,7 +42,7 @@ public class ActionGroupsApiTest extends AbstractRestApiUnitTest {
 		// GET, actiongroup exists
 		HttpResponse response = rh.executeGetRequest("/_searchguard/api/actiongroup/CRUD", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-		Settings settings = Settings.builder().loadFromSource(response.getBody()).build();
+		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Map<String, String> settingsAsMap = settings.getAsMap();
 		Assert.assertEquals(2, settingsAsMap.size());
 
@@ -104,13 +105,13 @@ public class ActionGroupsApiTest extends AbstractRestApiUnitTest {
 		rh.sendHTTPClientCertificate = true;
 		response = rh.executePutRequest("/_searchguard/api/actiongroup/SOMEGROUP", "", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
-		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.PAYLOAD_MANDATORY.getMessage(), settings.get("reason"));
 
 		// put new configuration with invalid payload, must fail
 		response = rh.executePutRequest("/_searchguard/api/actiongroup/SOMEGROUP", FileHelper.loadFile("actiongroup_not_parseable.json"),
 				new Header[0]);
-		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.BODY_NOT_PARSEABLE.getMessage(), settings.get("reason"));
 

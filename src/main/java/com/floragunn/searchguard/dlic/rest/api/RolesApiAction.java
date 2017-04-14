@@ -20,6 +20,7 @@ import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.rest.RestController;
+import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestRequest.Method;
 
 import com.floragunn.searchguard.configuration.AdminDNs;
@@ -55,5 +56,5 @@ public class RolesApiAction extends AbstractApiAction {
 	protected String getConfigName() {
 		return ConfigConstants.CONFIGNAME_ROLES;
 	}
-
+	
 }

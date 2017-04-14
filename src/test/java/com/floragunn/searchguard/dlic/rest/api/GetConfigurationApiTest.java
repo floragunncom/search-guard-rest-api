@@ -16,6 +16,7 @@ package com.floragunn.searchguard.dlic.rest.api;
 
 import org.apache.http.HttpStatus;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -38,7 +39,7 @@ public class GetConfigurationApiTest extends AbstractRestApiUnitTest {
 		// sg_config
 		response = rh.executeGetRequest("_searchguard/api/configuration/config");
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-		Settings settings = Settings.builder().loadFromSource(response.getBody()).build();
+		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(
 				settings.getAsBoolean("searchguard.dynamic.authc.authentication_domain_basic_internal.enabled", false),
 				true);
@@ -46,26 +47,26 @@ public class GetConfigurationApiTest extends AbstractRestApiUnitTest {
 		// internalusers
 		response = rh.executeGetRequest("_searchguard/api/configuration/internalusers");
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(settings.get("admin.hash"), "$2a$12$VcCDgh2NDk07JGN0rjGbM.Ad41qVR/YFJcgHp0UGns5JDymv..TOG");
 		Assert.assertEquals(settings.get("other.hash"), "someotherhash");
 
 		// roles
 		response = rh.executeGetRequest("_searchguard/api/configuration/roles");
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(settings.getAsArray("sg_all_access.cluster")[0], "cluster:*");
 
 		// roles
 		response = rh.executeGetRequest("_searchguard/api/configuration/rolesmapping");
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(settings.getAsArray("sg_role_starfleet.backendroles")[0], "starfleet");
 
 		// action groups
 		response = rh.executeGetRequest("_searchguard/api/configuration/actiongroups");
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(settings.getAsArray("ALL")[0], "indices:*");
 	}
 

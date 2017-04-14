@@ -34,9 +34,9 @@
   </distributionManagement>
 
  <properties>
-      <sg2.version>2.3.3.7</sg2.version>
-      <sgssl.version>2.3.3.16</sgssl.version>
-      <elasticsearch.version>2.3.3</elasticsearch.version>
+      <sg2.version>2.3.5.11</sg2.version>
+      <sgssl.version>2.3.5.20</sgssl.version>
+      <elasticsearch.version>2.3.5</elasticsearch.version>
       <dependency.locations.enabled>false</dependency.locations.enabled>
     </properties>
 

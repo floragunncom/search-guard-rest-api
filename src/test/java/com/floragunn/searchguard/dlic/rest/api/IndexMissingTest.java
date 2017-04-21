@@ -85,6 +85,16 @@ public class IndexMissingTest extends AbstractRestApiUnitTest {
 		// DELETE request
 		response = rh.executeDeleteRequest("/_searchguard/api/roles/sg_role_starfleet", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_INTERNAL_SERVER_ERROR, response.getStatusCode());
+		
+		// setup index now
+		setupAndInitializeSearchGuardIndex();
+		
+		// GET configuration
+		response = rh.executeGetRequest("_searchguard/api/configuration/roles");
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		settings = Settings.builder().loadFromSource(response.getBody()).build();
+		settingsAsMap = settings.getAsMap();
+		Assert.assertEquals("CLUSTER_ALL", settingsAsMap.get("sg_admin.cluster.0"));
 
 	}
 }

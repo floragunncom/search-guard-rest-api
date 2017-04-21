@@ -201,46 +201,10 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		return cl.getConfiguration(config);
 	}
 
-    protected boolean ensureIndexExists(final Client client) throws Throwable {
-        IndicesExistsRequest ier = new IndicesExistsRequest(this.searchguardIndex);
-		final Semaphore sem = new Semaphore(0);
-		final List<Throwable> exception = new ArrayList<Throwable>(1);
-		final Boolean[] exists = new Boolean[] {Boolean.FALSE};
-		
-		client.execute(
-				IndicesExistsAction.INSTANCE,
-				ier,
-				new ActionListener<IndicesExistsResponse>() {
-
-					@Override
-					public void onResponse(IndicesExistsResponse response) {
-						sem.release();
-						exists[0] = response.isExists();
-					}
-
-					@Override
-					public void onFailure(Exception e) {
-						sem.release();
-						exception.add(e);
-						logger.error("Failed to get Search Guard index due to {}", e);
-					}
-
-				}
-		);
-
-		if (!sem.tryAcquire(30, TimeUnit.SECONDS)) {
-			logger.error("Failed to get Search Guard index due to timeout");
-			return false;
-		}
-
-		if (exception.size() > 0) {
-			logger.error("Failed to get Search Guard index due to "+ exception.get(0).getMessage());
-			return false;
-		}		
-		
-		return exists[0];
-    }
-    
+	protected boolean ensureIndexExists(final Client client) throws Throwable {
+		return cs.state().metaData().hasConcreteIndex(this.searchguardIndex);
+	}
+   
 	protected void save(final Client client, final RestRequest request, final String config,
 			final Settings.Builder settings) throws Throwable {
 		final Semaphore sem = new Semaphore(0);

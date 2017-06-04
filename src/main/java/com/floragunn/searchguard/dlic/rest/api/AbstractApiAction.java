@@ -249,7 +249,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	@Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
 
-	    SSLInfo sslInfo = SSLRequestHelper.getSSLInfo(request, principalExtractor);
+	    SSLInfo sslInfo = SSLRequestHelper.getSSLInfo(settings, request, principalExtractor);
 	    
 	    if (sslInfo == null) {
             logger.error("No ssl info found");

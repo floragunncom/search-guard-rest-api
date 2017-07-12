@@ -7,7 +7,7 @@ This module for [Search Guard](https://github.com/floragunncom/search-guard) add
 
 ## Downloads
 
-* [Elasticsearch 5.3.3/5.4.1/5.4.2/5.4.3/5.5.x / REST API module 5.3-5](http://search.maven.org/remotecontent?filepath=com/floragunn/dlic-search-guard-rest-api/5.3-4/dlic-search-guard-rest-api-5.3-5-jar-with-dependencies.jar)
+* [Elasticsearch 5.3.3/5.4.1/5.4.2/5.4.3/5.5.x / REST API module 5.3-5](http://search.maven.org/remotecontent?filepath=com/floragunn/dlic-search-guard-rest-api/5.3-5/dlic-search-guard-rest-api-5.3-5-jar-with-dependencies.jar)
 
 * [Elasticsearch 5.3.0/5.3.1/5.3.2 and 5.4.0 / REST API module 5.3-4](http://search.maven.org/remotecontent?filepath=com/floragunn/dlic-search-guard-rest-api/5.3-4/dlic-search-guard-rest-api-5.3-4-jar-with-dependencies.jar)
 

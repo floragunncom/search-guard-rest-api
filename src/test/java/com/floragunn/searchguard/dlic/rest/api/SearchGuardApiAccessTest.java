@@ -31,7 +31,7 @@ public class SearchGuardApiAccessTest extends AbstractRestApiUnitTest {
 				rh.executeGetRequest("_searchguard/api/configuration/internalusers").getStatusCode());
 		Assert.assertEquals(HttpStatus.SC_FORBIDDEN,
 				rh.executeGetRequest("_searchguard/api/configuration/internalusers",
-						new BasicHeader("Authorization", "Basic " + encodeBasicHeader("admin", "admin")))
+						encodeBasicHeader("admin", "admin"))
 						.getStatusCode());
 
 		// test with non-admin cert, must fail
@@ -41,7 +41,7 @@ public class SearchGuardApiAccessTest extends AbstractRestApiUnitTest {
 				rh.executeGetRequest("_searchguard/api/configuration/internalusers").getStatusCode());
 		Assert.assertEquals(HttpStatus.SC_FORBIDDEN,
 				rh.executeGetRequest("_searchguard/api/configuration/internalusers",
-						new BasicHeader("Authorization", "Basic " + encodeBasicHeader("admin", "admin")))
+						encodeBasicHeader("admin", "admin"))
 						.getStatusCode());
 
 	}

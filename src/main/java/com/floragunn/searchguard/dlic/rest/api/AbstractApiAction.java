@@ -25,11 +25,9 @@ import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.logging.log4j.LogManager;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsAction;
-import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequest;
-import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.support.WriteRequest.RefreshPolicy;
@@ -53,6 +51,7 @@ import org.elasticsearch.rest.RestRequest.Method;
 import org.elasticsearch.rest.RestResponse;
 import org.elasticsearch.rest.RestStatus;
 
+import com.floragunn.dlic.auth.http.jwt.HTTPJwtAuthenticator;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateAction;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateNodeResponse;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateRequest;
@@ -213,7 +212,16 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		//ir.putInContext(ConfigConstants.SG_USER,
 		//		new User((String) request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL)));
 
-		client.index(ir.type(config).id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE)
+		String type = "sg";
+		String id = config;
+		
+		if(cs.state().metaData().index(this.searchguardIndex).mapping("config") != null) {
+		    type = config;
+	        id = "0";
+		}
+		
+		
+		client.index(ir.type(type).id(id).setRefreshPolicy(RefreshPolicy.IMMEDIATE)
 				.source(config, toSource(settings)), new ActionListener<IndexResponse>() {
 
 					@Override
@@ -380,30 +388,6 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		return success;
 	}
 
-	/*
-	protected static Settings toSettings(final BytesReference ref) {
-		if (ref == null || ref.length() == 0) {
-			throw new ElasticsearchException("ref invalid");
-		}
-
-		try {
-			return Settings.builder().put(new JsonSettingsLoader(true).load(XContentHelper.createParser(NamedXContentRegistry.EMPTY, ref))).build();
-		} catch (final IOException e) {
-			throw ExceptionsHelper.convertToElastic(e);
-		}
-	}
-
-	protected static Settings.Builder toSettingsBuilder(final BytesReference ref) {
-		if (ref == null || ref.length() == 0) {
-			throw new ElasticsearchException("ref invalid");
-		}
-
-		try {
-			return Settings.builder().put(new JsonSettingsLoader(true).load(XContentHelper.createParser(NamedXContentRegistry.EMPTY, ref)));
-		} catch (final IOException e) {
-			throw ExceptionsHelper.convertToElastic(e);
-		}
-	}*/
 
 	protected Settings.Builder copyKeysStartingWith(final Map<String, String> map, final String startWith) {
 		if (map == null || map.isEmpty() || startWith == null || startWith.isEmpty()) {
@@ -543,13 +527,37 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	protected void consumeParameters(final RestRequest request) {
 		request.param("name");
 	}
+	
+	private static void printLicenseInfo() {
+        final StringBuilder sb = new StringBuilder();
+        sb.append("******************************************************"+System.lineSeparator());
+        sb.append("Search Guard REST Management API is not free software"+System.lineSeparator());
+        sb.append("for commercial use in production."+System.lineSeparator());
+        sb.append("You have to obtain a license if you "+System.lineSeparator());
+        sb.append("use it in production."+System.lineSeparator());
+        sb.append(System.lineSeparator());
+        sb.append("See https://floragunn.com/searchguard-validate-license"+System.lineSeparator());
+        sb.append("In case of any doubt mail to <sales@floragunn.com>"+System.lineSeparator());
+        sb.append("*****************************************************");
+        
+        final String licenseInfo = sb.toString();
+        
+        if(!Boolean.getBoolean("sg.display_lic_none")) {
+            
+            if(!Boolean.getBoolean("sg.display_lic_only_stdout")) {
+                LogManager.getLogger(HTTPJwtAuthenticator.class).warn(licenseInfo);
+                System.err.println(licenseInfo);
+            }
+    
+            System.out.println(licenseInfo);
+        }
+        
+    }
 
-	public static void printLicenseInfo() {
-		System.out.println("***************************************************");
-		System.out.println("Searchguard Management API is not free software");
-		System.out.println("for commercial use in production.");
-		System.out.println("You have to obtain a license if you ");
-		System.out.println("use it in production.");
-		System.out.println("***************************************************");
-	}
+    @Override
+    public String getName() {
+        return getClass().getSimpleName();
+    }
+	
+	
 }

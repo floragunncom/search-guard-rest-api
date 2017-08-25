@@ -14,7 +14,6 @@
 
 package com.floragunn.searchguard.dlic.rest.api;
 
-import java.util.Arrays;
 
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.service.ClusterService;
@@ -55,9 +54,9 @@ public class GetConfigurationApiAction extends AbstractApiAction {
 		final String configname = request.param("configname");
 
 		if (configname == null || configname.length() == 0
-				|| !Arrays.asList(ConfigConstants.CONFIGNAMES).contains(configname)) {
+				|| !ConfigConstants.CONFIG_NAMES.contains(configname)) {
 			return badRequestResponse("No configuration name given, must be one of "
-					+ Joiner.on(",").join(ConfigConstants.CONFIGNAMES));
+					+ Joiner.on(",").join(ConfigConstants.CONFIG_NAMES));
 
 		}
 

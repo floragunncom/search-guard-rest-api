@@ -14,8 +14,11 @@
 
 package com.floragunn.searchguard.dlic.rest.api;
 
+import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Objects;
 
+import org.bouncycastle.crypto.generators.OpenBSDBCrypt;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.bytes.BytesReference;
@@ -29,7 +32,6 @@ import org.elasticsearch.rest.RestResponse;
 
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.IndexBaseConfigurationRepository;
-import com.floragunn.searchguard.crypto.BCrypt;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.dlic.rest.validation.InternalUsersValidator;
 import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
@@ -61,7 +63,7 @@ public class UserApiAction extends AbstractApiAction {
 		String plainTextPassword = additionalSettingsBuilder.get("password");
 		if (plainTextPassword != null && plainTextPassword.length() > 0) {
 			additionalSettingsBuilder.remove("password");
-			additionalSettingsBuilder.put("hash", hash(plainTextPassword.getBytes("UTF-8")));
+			additionalSettingsBuilder.put("hash", hash(plainTextPassword.toCharArray()));
 		}
 
 		final Settings additionalSettings = additionalSettingsBuilder.build();
@@ -82,8 +84,13 @@ public class UserApiAction extends AbstractApiAction {
 
 	}
 
-	public static String hash(final byte[] clearTextPassword) {
-		return BCrypt.hashpw(Objects.requireNonNull(clearTextPassword), BCrypt.gensalt(12));
+	public static String hash(final char[] clearTextPassword) {
+	    final byte[] salt = new byte[16];
+        new SecureRandom().nextBytes(salt);
+        final String hash = OpenBSDBCrypt.generate((Objects.requireNonNull(clearTextPassword)), salt, 12);
+        Arrays.fill(salt, (byte)0);
+        Arrays.fill(clearTextPassword, '\0');
+        return hash;
 	}
 
 	@Override

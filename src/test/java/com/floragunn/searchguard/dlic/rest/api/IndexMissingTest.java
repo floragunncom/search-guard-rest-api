@@ -10,28 +10,17 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator.ErrorType;
-import com.floragunn.searchguard.test.helper.cluster.ClusterConfiguration;
 import com.floragunn.searchguard.test.helper.file.FileHelper;
-import com.floragunn.searchguard.test.helper.rest.RestHelper;
 import com.floragunn.searchguard.test.helper.rest.RestHelper.HttpResponse;
 
 
-public class IndexMissingTest extends AbstractRestApiUnitTest {
-	
-	
-	// don't setup index for this test
-	protected void setup(ClusterConfiguration configuration) throws Exception {
-		final Settings nodeSettings = defaultNodeSettings(true);
-		log.debug("Starting nodes");
-		this.ci = ch.startCluster(nodeSettings, configuration);
-		log.debug("Started nodes");
-		RestHelper rh = new RestHelper(ci);
-		this.rh = rh;
-	}
+public class IndexMissingTest extends AbstractRestApiUnitTest {	
 
 	@Test
 	public void testGetConfiguration() throws Exception {
-		setup(ClusterConfiguration.SINGLENODE);
+	    // don't setup index for this test
+	    init = false;
+		setup();
 
 		// test with no SG index at all
 		testHttpOperations();
@@ -88,7 +77,7 @@ public class IndexMissingTest extends AbstractRestApiUnitTest {
 		Assert.assertEquals(HttpStatus.SC_INTERNAL_SERVER_ERROR, response.getStatusCode());
 		
 		// setup index now
-		setupAndInitializeSearchGuardIndex();
+		initialize(this.clusterInfo);
 		
 		// GET configuration
 		response = rh.executeGetRequest("_searchguard/api/configuration/roles");

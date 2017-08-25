@@ -23,50 +23,32 @@ import org.apache.http.HttpStatus;
 import org.apache.http.message.BasicHeader;
 import org.elasticsearch.action.admin.cluster.node.info.NodesInfoRequest;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
-import org.elasticsearch.action.index.IndexRequest;
-import org.elasticsearch.action.support.WriteRequest.RefreshPolicy;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.transport.Netty4Plugin;
 import org.junit.Assert;
 
 import com.floragunn.searchguard.SearchGuardPlugin;
-import com.floragunn.searchguard.action.configupdate.ConfigUpdateAction;
-import com.floragunn.searchguard.action.configupdate.ConfigUpdateRequest;
-import com.floragunn.searchguard.action.configupdate.ConfigUpdateResponse;
 import com.floragunn.searchguard.ssl.util.SSLConfigConstants;
-import com.floragunn.searchguard.support.ConfigConstants;
-import com.floragunn.searchguard.test.AbstractSGUnitTest;
-import com.floragunn.searchguard.test.helper.cluster.ClusterConfiguration;
-import com.floragunn.searchguard.test.helper.cluster.ClusterHelper;
+import com.floragunn.searchguard.test.DynamicSgConfig;
+import com.floragunn.searchguard.test.SingleClusterTest;
 import com.floragunn.searchguard.test.helper.file.FileHelper;
 import com.floragunn.searchguard.test.helper.rest.RestHelper;
 import com.floragunn.searchguard.test.helper.rest.RestHelper.HttpResponse;
 
-public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
+public abstract class AbstractRestApiUnitTest extends SingleClusterTest {
 
-	protected void setup() throws Exception {
-		setup(ClusterConfiguration.SINGLENODE);
-	}
-
-	protected void setup(ClusterConfiguration configuration) throws Exception {
-		final Settings nodeSettings = defaultNodeSettings(true);
-
-		log.debug("Starting nodes");
-		this.ci = ch.startCluster(nodeSettings, configuration);
-		log.debug("Started nodes");
-
-		log.debug("Setup index");
-		setupAndInitializeSearchGuardIndex();
-		log.debug("Setup done");
-
-		RestHelper rh = new RestHelper(ci);
-
-		this.rh = rh;
-	}
-
+    protected RestHelper rh = null;
+    protected boolean init = true;
+    
+    protected final void setup() throws Exception {
+        final Settings nodeSettings = defaultNodeSettings(true);
+        setup(Settings.EMPTY, new DynamicSgConfig(), nodeSettings, init);
+        rh = restHelper();
+    }
+    
 	protected void deleteUser(String username) throws Exception {
 		boolean sendHTTPClientCertificate = rh.sendHTTPClientCertificate;
 		rh.sendHTTPClientCertificate = true;
@@ -118,7 +100,7 @@ public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
 		rh.sendHTTPClientCertificate = false;
 		Assert.assertEquals(status,
 				rh.executeGetRequest("",
-						new BasicHeader("Authorization", "Basic " + encodeBasicHeader(username, password)))
+						encodeBasicHeader(username, password))
 						.getStatusCode());
 		rh.sendHTTPClientCertificate = sendHTTPClientCertificate;
 	}
@@ -129,7 +111,7 @@ public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
 		rh.sendHTTPClientCertificate = false;
 		String action = indexName + "/" + type + "/" + id;
 		HttpResponse response = rh.executeGetRequest(action,
-				new BasicHeader("Authorization", "Basic " + encodeBasicHeader(username, password)));
+				encodeBasicHeader(username, password));
 		int returnedStatus = response.getStatusCode();
 		Assert.assertEquals(status, returnedStatus);
 		rh.sendHTTPClientCertificate = sendHTTPClientCertificate;
@@ -145,7 +127,7 @@ public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
 		String action = indexName + "/" + type + "/" + id;
 		String payload = "{\"value\" : \"true\"}";
 		HttpResponse response = rh.executePutRequest(action, payload,
-				new BasicHeader("Authorization", "Basic " + encodeBasicHeader(username, password)));
+				encodeBasicHeader(username, password));
 		int returnedStatus = response.getStatusCode();
 		Assert.assertEquals(status, returnedStatus);
 		rh.sendHTTPClientCertificate = sendHTTPClientCertificate;
@@ -161,8 +143,9 @@ public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
 		rh.sendHTTPClientCertificate = sendHTTPClientCertificate;
 	}
 	
-	protected void setupSearchGuardIndex() {
-		Settings tcSettings = Settings.builder().put("cluster.name", ClusterHelper.clustername)
+	/*protected void setupSearchGuardIndex() {
+		Settings tcSettings = Settings.builder()
+		        //.put("cluster.name", ClusterHelper.clustername)
 				.put(defaultNodeSettings(false))
 				.put("searchguard.ssl.transport.keystore_filepath",
 						FileHelper.getAbsoluteFilePathFromClassPath("kirk-keystore.jks"))
@@ -172,8 +155,8 @@ public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
 
 			log.debug("Start transport client to init");
 
-			tc.addTransportAddress(new InetSocketTransportAddress(new InetSocketAddress(ci.nodeHost, ci.nodePort)));
-			Assert.assertEquals(ci.numNodes,
+			tc.addTransportAddress(new TransportAddress(new InetSocketAddress(clusterInfo.nodeHost, clusterInfo.nodePort)));
+			Assert.assertEquals(clusterInfo.numNodes,
 					tc.admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().size());
 
 			tc.admin().indices().create(new CreateIndexRequest("searchguard")).actionGet();
@@ -181,56 +164,10 @@ public abstract class AbstractRestApiUnitTest extends AbstractSGUnitTest {
 
 		}
 		
-	}
-	
-	protected void setupAndInitializeSearchGuardIndex() {
-		Settings tcSettings = Settings.builder().put("cluster.name", ClusterHelper.clustername)
-				.put(defaultNodeSettings(false))
-				.put("searchguard.ssl.transport.keystore_filepath",
-						FileHelper.getAbsoluteFilePathFromClassPath("kirk-keystore.jks"))
-				.put(SSLConfigConstants.SEARCHGUARD_SSL_TRANSPORT_KEYSTORE_ALIAS, "kirk").put("path.home", ".").build();
-
-		try (TransportClient tc = new TransportClientImpl(tcSettings,asCollection(Netty4Plugin.class, SearchGuardPlugin.class))) {
-
-			log.debug("Start transport client to init");
-
-			tc.addTransportAddress(new InetSocketTransportAddress(new InetSocketAddress(ci.nodeHost, ci.nodePort)));
-			Assert.assertEquals(ci.numNodes,
-					tc.admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().size());
-
-			tc.admin().indices().create(new CreateIndexRequest("searchguard")).actionGet();
-
-			tc.index(new IndexRequest("searchguard").type("config").id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE)
-					.source("config", FileHelper.readYamlContent("sg_config.yml"))).actionGet();
-			tc.index(new IndexRequest("searchguard").type("internalusers").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
-					.source("internalusers", FileHelper.readYamlContent("sg_internal_users.yml"))).actionGet();
-			tc.index(new IndexRequest("searchguard").type("roles").id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE)
-					.source("roles", FileHelper.readYamlContent("sg_roles.yml"))).actionGet();
-			tc.index(new IndexRequest("searchguard").type("rolesmapping").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
-					.source("rolesmapping", FileHelper.readYamlContent("sg_roles_mapping.yml"))).actionGet();
-			tc.index(new IndexRequest("searchguard").type("actiongroups").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
-					.source("actiongroups", FileHelper.readYamlContent("sg_action_groups.yml"))).actionGet();
-
-			ConfigUpdateResponse cur = tc
-					.execute(ConfigUpdateAction.INSTANCE, new ConfigUpdateRequest(ConfigConstants.CONFIGNAMES))
-					.actionGet();
-			Assert.assertEquals(ci.numNodes, cur.getNodes().size());
-
-		}	
-	}
+	}*/
 
 	protected Settings defaultNodeSettings(boolean enableRestSSL) {
-		Settings.Builder builder = Settings.builder().put("searchguard.ssl.transport.enabled", true)
-				.put(SSLConfigConstants.SEARCHGUARD_SSL_HTTP_ENABLE_OPENSSL_IF_AVAILABLE, false)
-				.put(SSLConfigConstants.SEARCHGUARD_SSL_TRANSPORT_ENABLE_OPENSSL_IF_AVAILABLE, false)
-				.put(SSLConfigConstants.SEARCHGUARD_SSL_TRANSPORT_KEYSTORE_ALIAS, "node-0")
-				.put("searchguard.ssl.transport.keystore_filepath",
-						FileHelper.getAbsoluteFilePathFromClassPath("node-0-keystore.jks"))
-				.put("searchguard.ssl.transport.truststore_filepath",
-						FileHelper.getAbsoluteFilePathFromClassPath("truststore.jks"))
-				.put("searchguard.ssl.transport.enforce_hostname_verification", false)
-				.put("searchguard.ssl.transport.resolve_hostname", false)
-				.putArray("searchguard.authcz.admin_dn", "CN=kirk,OU=client,O=client,l=tEst, C=De");
+		Settings.Builder builder = Settings.builder();
 
 		if (enableRestSSL) {
 			builder.put("searchguard.ssl.http.enabled", true)

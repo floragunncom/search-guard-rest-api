@@ -15,7 +15,6 @@
 package com.floragunn.searchguard.dlic.rest.api;
 
 import org.apache.http.HttpStatus;
-import org.apache.http.message.BasicHeader;
 import org.junit.Assert;
 import org.junit.Test;
 

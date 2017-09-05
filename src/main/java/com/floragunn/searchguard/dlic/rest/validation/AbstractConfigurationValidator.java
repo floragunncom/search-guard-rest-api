@@ -33,6 +33,7 @@ import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentHelper;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.rest.RestRequest.Method;
 
 import com.fasterxml.jackson.core.JsonFactory;
@@ -151,7 +152,7 @@ public abstract class AbstractConfigurationValidator {
 	}
 
 	private boolean checkDatatypes() throws Exception {		
-		String contentAsJson = XContentHelper.convertToJson(content, false);
+		String contentAsJson = XContentHelper.convertToJson(content, false, XContentType.YAML);
 		JsonParser parser = factory.createParser(contentAsJson);
 		JsonToken token = null;
 		while ((token = parser.nextToken()) != null) {
@@ -235,7 +236,7 @@ public abstract class AbstractConfigurationValidator {
 		}
 
 		try {
-			return Settings.builder().put(new JsonSettingsLoader(true).load(XContentHelper.createParser(NamedXContentRegistry.EMPTY, ref)));
+			return Settings.builder().put(new JsonSettingsLoader(true).load(XContentHelper.createParser(NamedXContentRegistry.EMPTY, ref, XContentType.YAML)));
 		} catch (final IOException e) {
 			throw ExceptionsHelper.convertToElastic(e);
 		}

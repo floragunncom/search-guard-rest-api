@@ -14,6 +14,7 @@
 
 package com.floragunn.searchguard.dlic.rest.api;
 
+import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Objects;
@@ -40,10 +41,10 @@ import com.floragunn.searchguard.support.ConfigConstants;
 public class UserApiAction extends AbstractApiAction {
 
 	@Inject
-	public UserApiAction(final Settings settings, final RestController controller, final Client client,
+	public UserApiAction(final Settings settings, final Path configPath, final RestController controller, final Client client,
 			final AdminDNs adminDNs, final IndexBaseConfigurationRepository cl, final ClusterService cs,
             final PrincipalExtractor principalExtractor) {
-		super(settings, controller, client, adminDNs, cl, cs, principalExtractor);
+		super(settings, configPath, controller, client, adminDNs, cl, cs, principalExtractor);
 		controller.registerHandler(Method.GET, "/_searchguard/api/user/{name}", this);
 		controller.registerHandler(Method.GET, "/_searchguard/api/user/", this);
 		controller.registerHandler(Method.DELETE, "/_searchguard/api/user/{name}", this);

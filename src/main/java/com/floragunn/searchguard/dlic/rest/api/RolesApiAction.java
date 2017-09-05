@@ -14,6 +14,8 @@ package com.floragunn.searchguard.dlic.rest.api;
  * 
  */
 
+import java.nio.file.Path;
+
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.bytes.BytesReference;
@@ -32,9 +34,9 @@ import com.floragunn.searchguard.support.ConfigConstants;
 public class RolesApiAction extends AbstractApiAction {
 
 	@Inject
-	public RolesApiAction(Settings settings, RestController controller, Client client, AdminDNs adminDNs, IndexBaseConfigurationRepository cl,
+	public RolesApiAction(Settings settings, final Path configPath, RestController controller, Client client, AdminDNs adminDNs, IndexBaseConfigurationRepository cl,
 			ClusterService cs, final PrincipalExtractor principalExtractor) {
-		super(settings, controller, client, adminDNs, cl, cs, principalExtractor);
+		super(settings, configPath, controller, client, adminDNs, cl, cs, principalExtractor);
 		controller.registerHandler(Method.GET, "/_searchguard/api/roles/", this);
 		controller.registerHandler(Method.GET, "/_searchguard/api/roles/{name}", this);
 		controller.registerHandler(Method.DELETE, "/_searchguard/api/roles/{name}", this);

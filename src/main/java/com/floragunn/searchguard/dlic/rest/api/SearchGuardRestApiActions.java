@@ -13,6 +13,7 @@
  */
 package com.floragunn.searchguard.dlic.rest.api;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -30,15 +31,15 @@ import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
 
 public class SearchGuardRestApiActions {
 
-	public static Collection<RestHandler> getHandler(Settings settings, RestController controller, Client client, 
+	public static Collection<RestHandler> getHandler(Settings settings, Path configPath, RestController controller, Client client, 
 	        AdminDNs adminDns, IndexBaseConfigurationRepository cr, ClusterService cs, PrincipalExtractor principalExtractor) {
 	    final List<RestHandler> handlers = new ArrayList<RestHandler>(6);
-	    handlers.add(new UserApiAction(settings, controller, client, adminDns, cr, cs, principalExtractor));
-	    handlers.add(new RolesMappingApiAction(settings, controller, client, adminDns, cr, cs, principalExtractor));
-	    handlers.add(new RolesApiAction(settings, controller, client, adminDns, cr, cs, principalExtractor));
-	    handlers.add(new ActionGroupsApiAction(settings, controller, client, adminDns, cr, cs, principalExtractor));
-	    handlers.add(new GetConfigurationApiAction(settings, controller, client, adminDns, cr, cs, principalExtractor));
-	    handlers.add(new FlushCacheApiAction(settings, controller, client, adminDns, cr, cs, principalExtractor));
+	    handlers.add(new UserApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor));
+	    handlers.add(new RolesMappingApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor));
+	    handlers.add(new RolesApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor));
+	    handlers.add(new ActionGroupsApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor));
+	    handlers.add(new GetConfigurationApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor));
+	    handlers.add(new FlushCacheApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor));
 	    return Collections.unmodifiableCollection(handlers);
 	}
 }

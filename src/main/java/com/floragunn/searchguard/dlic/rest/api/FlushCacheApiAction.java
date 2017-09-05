@@ -13,6 +13,7 @@
  */
 package com.floragunn.searchguard.dlic.rest.api;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Semaphore;
@@ -43,10 +44,10 @@ import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
 public class FlushCacheApiAction extends AbstractApiAction {
 
 	@Inject
-	public FlushCacheApiAction(final Settings settings, final RestController controller, final Client client,
+	public FlushCacheApiAction(final Settings settings, final Path configPath, final RestController controller, final Client client,
 			final AdminDNs adminDNs, final IndexBaseConfigurationRepository cl, final ClusterService cs,
             final PrincipalExtractor principalExtractor) {
-		super(settings, controller, client, adminDNs, cl, cs, principalExtractor);
+		super(settings, configPath, controller, client, adminDNs, cl, cs, principalExtractor);
 		controller.registerHandler(Method.DELETE, "/_searchguard/api/cache", this);
 		controller.registerHandler(Method.GET, "/_searchguard/api/cache", this);
 		controller.registerHandler(Method.PUT, "/_searchguard/api/cache", this);

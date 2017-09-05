@@ -15,6 +15,8 @@
 package com.floragunn.searchguard.dlic.rest.api;
 
 
+import java.nio.file.Path;
+
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.bytes.BytesReference;
@@ -39,10 +41,10 @@ import com.google.common.base.Joiner;
 public class GetConfigurationApiAction extends AbstractApiAction {
 
 	@Inject
-	public GetConfigurationApiAction(final Settings settings, final RestController controller, final Client client,
+	public GetConfigurationApiAction(final Settings settings, final Path configPath, final RestController controller, final Client client,
 			final AdminDNs adminDNs, final IndexBaseConfigurationRepository cl, final ClusterService cs,
             final PrincipalExtractor principalExtractor) {
-		super(settings, controller, client, adminDNs, cl, cs, principalExtractor);
+		super(settings, configPath, controller, client, adminDNs, cl, cs, principalExtractor);
 		controller.registerHandler(Method.GET, "/_searchguard/api/configuration/{configname}", this);
 	}
 

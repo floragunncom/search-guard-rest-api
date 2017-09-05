@@ -14,24 +14,16 @@
 
 package com.floragunn.searchguard.dlic.rest.api;
 
-import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
 
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
-import org.apache.http.message.BasicHeader;
-import org.elasticsearch.action.admin.cluster.node.info.NodesInfoRequest;
-import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.plugins.Plugin;
-import org.elasticsearch.transport.Netty4Plugin;
 import org.junit.Assert;
 
-import com.floragunn.searchguard.SearchGuardPlugin;
-import com.floragunn.searchguard.ssl.util.SSLConfigConstants;
 import com.floragunn.searchguard.test.DynamicSgConfig;
 import com.floragunn.searchguard.test.SingleClusterTest;
 import com.floragunn.searchguard.test.helper.file.FileHelper;

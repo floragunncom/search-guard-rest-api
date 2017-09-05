@@ -15,6 +15,7 @@
 package com.floragunn.searchguard.dlic.rest.api;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,6 +44,7 @@ import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
@@ -72,16 +74,18 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	private final ClusterService cs;
 	private final PrincipalExtractor principalExtractor;
 	private String searchguardIndex;
+	private final Path configPath;
 
 	static {
 		printLicenseInfo();
 	}
 
-	protected AbstractApiAction(final Settings settings, final RestController controller, final Client client,
+	protected AbstractApiAction(final Settings settings, final Path configPath, final RestController controller, final Client client,
 			final AdminDNs adminDNs, final ConfigurationRepository cl, final ClusterService cs,
 			final PrincipalExtractor principalExtractor) {
 		super(settings);
-		this.searchguardIndex = settings.get(ConfigConstants.SG_CONFIG_INDEX, ConfigConstants.SG_DEFAULT_CONFIG_INDEX);
+		this.configPath = configPath;
+		this.searchguardIndex = settings.get(ConfigConstants.SEARCHGUARD_CONFIG_INDEX_NAME, ConfigConstants.SG_DEFAULT_CONFIG_INDEX);
 		this.adminDNs = adminDNs;
 		this.cl = cl;
 		this.cs = cs;
@@ -209,8 +213,6 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		final Semaphore sem = new Semaphore(0);
 		final List<Throwable> exception = new ArrayList<Throwable>(1);
 		final IndexRequest ir = new IndexRequest(this.searchguardIndex);
-		//ir.putInContext(ConfigConstants.SG_USER,
-		//		new User((String) request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL)));
 
 		String type = "sg";
 		String id = config;
@@ -257,7 +259,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	@Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
 
-	    SSLInfo sslInfo = SSLRequestHelper.getSSLInfo(settings, request, principalExtractor);
+	    SSLInfo sslInfo = SSLRequestHelper.getSSLInfo(settings, configPath, request, principalExtractor);
 	    
 	    if (sslInfo == null) {
             logger.error("No ssl info found");
@@ -454,7 +456,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	}
 
 	protected static String convertToYaml(BytesReference bytes, boolean prettyPrint) throws IOException {
-		try (XContentParser parser = XContentFactory.xContent(XContentFactory.xContentType(bytes))
+		try (XContentParser parser = JsonXContent.jsonXContent
 				.createParser(NamedXContentRegistry.EMPTY, bytes.streamInput())) {
 			parser.nextToken();
 			XContentBuilder builder = XContentFactory.yamlBuilder();

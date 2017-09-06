@@ -53,7 +53,6 @@ import org.elasticsearch.rest.RestRequest.Method;
 import org.elasticsearch.rest.RestResponse;
 import org.elasticsearch.rest.RestStatus;
 
-import com.floragunn.dlic.auth.http.jwt.HTTPJwtAuthenticator;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateAction;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateNodeResponse;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateRequest;
@@ -547,7 +546,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
         if(!Boolean.getBoolean("sg.display_lic_none")) {
             
             if(!Boolean.getBoolean("sg.display_lic_only_stdout")) {
-                LogManager.getLogger(HTTPJwtAuthenticator.class).warn(licenseInfo);
+                LogManager.getLogger(AbstractApiAction.class).warn(licenseInfo);
                 System.err.println(licenseInfo);
             }
     

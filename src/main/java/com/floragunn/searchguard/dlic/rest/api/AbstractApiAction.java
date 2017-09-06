@@ -539,7 +539,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
         sb.append(System.lineSeparator());
         sb.append("See https://floragunn.com/searchguard-validate-license"+System.lineSeparator());
         sb.append("In case of any doubt mail to <sales@floragunn.com>"+System.lineSeparator());
-        sb.append("*****************************************************");
+        sb.append("*****************************************************"+System.lineSeparator());
         
         final String licenseInfo = sb.toString();
         

@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: org.apache.lucene:lucene-queries:7.0.0-snapshot-a128fcb">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/apache/lucene/lucene-queries/7.0.0-snapshot-a128fcb/lucene-queries-7.0.0-snapshot-a128fcb.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/org/apache/lucene/lucene-queries/7.0.0-snapshot-a128fcb/lucene-queries-7.0.0-snapshot-a128fcb-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/apache/lucene/lucene-queries/7.0.0-snapshot-a128fcb/lucene-queries-7.0.0-snapshot-a128fcb-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

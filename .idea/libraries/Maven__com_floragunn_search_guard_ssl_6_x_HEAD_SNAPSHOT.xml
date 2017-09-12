@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: com.floragunn:search-guard-ssl:6.x-HEAD-SNAPSHOT">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/floragunn/search-guard-ssl/6.x-HEAD-SNAPSHOT/search-guard-ssl-6.x-HEAD-20170912.102312-14.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/com/floragunn/search-guard-ssl/6.x-HEAD-SNAPSHOT/search-guard-ssl-6.x-HEAD-20170912.102312-14-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/floragunn/search-guard-ssl/6.x-HEAD-SNAPSHOT/search-guard-ssl-6.x-HEAD-20170912.102312-14-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

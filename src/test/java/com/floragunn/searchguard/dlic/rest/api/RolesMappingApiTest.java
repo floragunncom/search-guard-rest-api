@@ -73,7 +73,9 @@ public class RolesMappingApiTest extends AbstractRestApiUnitTest {
 		// sg_role_starfleet_captains and sg_role_starfleet
 		addUserWithPassword("picard", "picard", new String[] { "captains" }, HttpStatus.SC_CREATED);
 		checkWriteAccess(HttpStatus.SC_CREATED, "picard", "picard", "sf", "ships", 1);
-		checkWriteAccess(HttpStatus.SC_CREATED, "picard", "picard", "sf", "public", 1);
+		
+		// TODO: only one doctype allowed for ES6
+		//checkWriteAccess(HttpStatus.SC_CREATED, "picard", "picard", "sf", "public", 1);
 
 		// --- DELETE
 
@@ -92,8 +94,9 @@ public class RolesMappingApiTest extends AbstractRestApiUnitTest {
 		// now picard is only in sg_role_starfleet, which has write access to
 		// public, but not to ships
 		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 1);
-		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 1);
-		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 1);
+		
+		// TODO: only one doctype allowed for ES6
+		// checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 1);
 
 		// remove also sg_role_starfleet, poor picard has no mapping left
 		rh.sendHTTPClientCertificate = true;
@@ -199,17 +202,21 @@ public class RolesMappingApiTest extends AbstractRestApiUnitTest {
 	private void checkAllSfAllowed() throws Exception {
 		rh.sendHTTPClientCertificate = false;
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 1);
-		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 1);
+		// TODO: only one doctype allowed for ES6
+		// checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 1);
 		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 1);
-		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 1);
+		// TODO: only one doctype allowed for ES6
+		//checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 1);
 	}
 
 	private void checkAllSfForbidden() throws Exception {
 		rh.sendHTTPClientCertificate = false;
 		checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 1);
-		checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "public", 1);
+		// TODO: only one doctype allowed for ES6
+		// checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "public", 1);
 		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 1);
-		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "public", 1);
+		// TODO: only one doctype allowed for ES6
+		// checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "public", 1);
 	}
 
 	private HttpResponse deleteAndputNewMapping(String fileName) throws Exception {

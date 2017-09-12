@@ -73,10 +73,7 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 
 		// no username given
 		response = rh.executePutRequest("/_searchguard/api/user/", "{hash: \"123\"}", new Header[0]);
-		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
-
-		response = rh.executePutRequest("/_searchguard/api/user", "{hash: \"123\"}", new Header[0]);
-		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+		Assert.assertEquals(HttpStatus.SC_METHOD_NOT_ALLOWED, response.getStatusCode());
 
 		// Faulty JSON payload
 		response = rh.executePutRequest("/_searchguard/api/user/nagilum", "{some: \"thing\" asd  other: \"thing\"}",
@@ -85,12 +82,14 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(settings.get("reason"), AbstractConfigurationValidator.ErrorType.BODY_NOT_PARSEABLE.getMessage());
 
-		// Missing quotes in JSON
+		// Missing quotes in JSON - parseable in 6.x, but wrong config keys
 		response = rh.executePutRequest("/_searchguard/api/user/nagilum", "{some: \"thing\", other: \"thing\"}",
 				new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.BODY_NOT_PARSEABLE.getMessage(), settings.get("reason"));
+		Assert.assertEquals(settings.get("reason"), AbstractConfigurationValidator.ErrorType.INVALID_CONFIGURATION.getMessage());
+		Assert.assertTrue(settings.get(AbstractConfigurationValidator.INVALID_KEYS_KEY + ".keys").contains("some"));
+		Assert.assertTrue(settings.get(AbstractConfigurationValidator.INVALID_KEYS_KEY + ".keys").contains("other"));
 
 		// Wrong config keys
 		response = rh.executePutRequest("/_searchguard/api/user/nagilum", "{\"some\": \"thing\", \"other\": \"thing\"}",
@@ -117,10 +116,7 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		// try remove user, no username
 		rh.sendHTTPClientCertificate = true;
 		response = rh.executeDeleteRequest("/_searchguard/api/user", new Header[0]);
-		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
-
-		response = rh.executeDeleteRequest("/_searchguard/api/user/", new Header[0]);
-		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+		Assert.assertEquals(HttpStatus.SC_METHOD_NOT_ALLOWED, response.getStatusCode());
 
 		// try remove user, nonexisting user
 		response = rh.executeDeleteRequest("/_searchguard/api/user/picard", new Header[0]);
@@ -143,8 +139,24 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 
 		deleteUser("nagilum");
 
-		// ROLES
+		// Check unchanged password functionality
+		rh.sendHTTPClientCertificate = true;
+		
+		// new user, password or hash is mandatory
+		addUserWithoutPasswordOrHash("nagilum", new String[] { "starfleet" }, HttpStatus.SC_BAD_REQUEST);
+		// new user, add hash
+		addUserWithHash("nagilum", "$2a$12$n5nubfWATfQjSYHiWtUyeOxMIxFInUHOAx8VMmGmxFNPGpaBmeB.m",
+				HttpStatus.SC_CREATED);
+		// update user, do not specify hash or password, hash must remain the same
+		addUserWithoutPasswordOrHash("nagilum", new String[] { "starfleet" }, HttpStatus.SC_OK);
+		// get user, check hash, must be untouched
+		response = rh.executeGetRequest("/_searchguard/api/user/nagilum", new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
+		Assert.assertTrue(settings.getAsMap().get("nagilum.hash").equals("$2a$12$n5nubfWATfQjSYHiWtUyeOxMIxFInUHOAx8VMmGmxFNPGpaBmeB.m"));
 
+		
+		// ROLES
 		// create index first
 		setupStarfleetIndex();
 
@@ -191,21 +203,22 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 
 		// check read access to starfleet index and ships type, must fail
 		checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 0);
-
+		
+		// TODO: Multiple doctypes not allowed anymor
 		// overwrite user picard, and give him role "starfleet".
 		addUserWithPassword("picard", "picard", new String[] { "starfleet" }, HttpStatus.SC_OK);
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
-		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
+		//checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
 		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 1);
-		checkWriteAccess(HttpStatus.SC_CREATED, "picard", "picard", "sf", "public", 1);
+		//checkWriteAccess(HttpStatus.SC_CREATED, "picard", "picard", "sf", "public", 1);
 
 		// overwrite user picard, and give him role "starfleet" plus "captains
 		addUserWithPassword("picard", "picard", new String[] { "starfleet", "captains" }, HttpStatus.SC_OK);
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
-		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
-		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 1);
+//		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
+//		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 1);
 		checkWriteAccess(HttpStatus.SC_CREATED, "picard", "picard", "sf", "ships", 1);
-		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 1);
+		// checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 1);
 
 		rh.sendHTTPClientCertificate = true;
 		response = rh.executeGetRequest("/_searchguard/api/user/picard", new Header[0]);

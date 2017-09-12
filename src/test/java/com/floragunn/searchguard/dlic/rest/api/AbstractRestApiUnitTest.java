@@ -58,6 +58,7 @@ public abstract class AbstractRestApiUnitTest extends SingleClusterTest {
 		rh.sendHTTPClientCertificate = sendHTTPClientCertificate;
 	}
 
+	
 	protected void addUserWithPassword(String username, String password, String[] roles, int status) throws Exception {
 		boolean sendHTTPClientCertificate = rh.sendHTTPClientCertificate;
 		rh.sendHTTPClientCertificate = true;
@@ -74,6 +75,23 @@ public abstract class AbstractRestApiUnitTest extends SingleClusterTest {
 		rh.sendHTTPClientCertificate = sendHTTPClientCertificate;
 	}
 
+	protected void addUserWithoutPasswordOrHash(String username, String[] roles, int status) throws Exception {
+		boolean sendHTTPClientCertificate = rh.sendHTTPClientCertificate;
+		rh.sendHTTPClientCertificate = true;
+		String payload = "{ \"roles\": [";
+		for (int i = 0; i < roles.length; i++) {
+			payload += "\" " + roles[i] + " \"";
+			if (i + 1 < roles.length) {
+				payload += ",";
+			}
+		}
+		payload += "]}";
+		HttpResponse response = rh.executePutRequest("/_searchguard/api/user/" + username, payload, new Header[0]);
+		Assert.assertEquals(status, response.getStatusCode());
+		rh.sendHTTPClientCertificate = sendHTTPClientCertificate;
+	}
+
+	
 	protected void addUserWithHash(String username, String hash) throws Exception {
 		addUserWithHash(username, hash, HttpStatus.SC_OK);
 	}

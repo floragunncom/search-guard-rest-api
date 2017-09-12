@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -27,6 +28,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.index.IndexRequest;
@@ -68,6 +70,8 @@ import com.floragunn.searchguard.support.ConfigConstants;
 
 public abstract class AbstractApiAction extends BaseRestHandler {
 
+	protected final Logger log = LogManager.getLogger(this.getClass());
+	
 	private final AdminDNs adminDNs;
 	protected final ConfigurationRepository cl;
 	private final ClusterService cs;
@@ -138,8 +142,9 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		}
 
 		final Settings.Builder existing = load(getConfigName());
-
-		boolean modified = removeKeysStartingWith(existing.internalMap(), name + ".");
+		
+		Map<String, String> removedEntries = removeKeysStartingWith(existing.internalMap(), name + "."); 
+		boolean modified = !removedEntries.isEmpty();
 
 		if (modified) {
 			save(client, request, getConfigName(), existing);
@@ -158,7 +163,13 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		}
 
 		final Settings.Builder existing = load(getConfigName());
-		boolean existed = removeKeysStartingWith(existing.internalMap(), name + ".");
+		
+		
+		log.trace(additionalSettingsBuilder.build().getAsMap().toString());
+
+		Map<String, String> removedEntries = removeKeysStartingWith(existing.internalMap(), name + "."); 
+		boolean existed = !removedEntries.isEmpty();
+				
 		existing.put(prependValueToEachKey(additionalSettingsBuilder.build().getAsMap(), name + "."));
 		save(client, request, getConfigName(), existing);
 		if (existed) {
@@ -404,22 +415,22 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		return Settings.builder().put(copiedValues);
 	}
 
-	protected boolean removeKeysStartingWith(final Map<String, String> map, final String startWith) {
+	protected Map<String, String> removeKeysStartingWith(final Map<String, String> map, final String startWith) {
 		if (map == null || map.isEmpty() || startWith == null || startWith.isEmpty()) {
-			return false;
+			return Collections.emptyMap();
 		}
-
-		boolean modified = false;
-
+		Map<String, String> removedEntries = new HashMap<>();
+		
 		for (final String key : new HashSet<String>(map.keySet())) {
 			if (key != null && key.startsWith(startWith)) {
-				if (map.remove(key) != null) {
-					modified = true;
+				String value = map.remove(key);
+				if (value != null) {
+					removedEntries.put(key, value);
 				}
+
 			}
 		}
-
-		return modified;
+		return removedEntries;
 	}
 
 	protected Map<String, String> prependValueToEachKey(final Map<String, String> map, final String prepend) {
@@ -512,7 +523,11 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	protected Tuple<String[], RestResponse> internalErrorResponse(String message) {
 		return response(RestStatus.INTERNAL_SERVER_ERROR, RestStatus.INTERNAL_SERVER_ERROR.name(), message);
 	}
-	
+
+	protected Tuple<String[], RestResponse> unprocessable(String message) {
+		return response(RestStatus.UNPROCESSABLE_ENTITY, RestStatus.UNPROCESSABLE_ENTITY.name(), message);
+	}
+
 	protected Tuple<String[], RestResponse> notImplemented(Method method) {
 		return response(RestStatus.NOT_IMPLEMENTED, RestStatus.NOT_IMPLEMENTED.name(), "Method " + method.name() + " not supported for this action.");
 	}

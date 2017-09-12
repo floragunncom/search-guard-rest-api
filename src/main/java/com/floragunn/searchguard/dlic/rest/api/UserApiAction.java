@@ -17,6 +17,7 @@ package com.floragunn.searchguard.dlic.rest.api;
 import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Objects;
 
 import org.bouncycastle.crypto.generators.OpenBSDBCrypt;
@@ -67,12 +68,33 @@ public class UserApiAction extends AbstractApiAction {
 			additionalSettingsBuilder.put("hash", hash(plainTextPassword.toCharArray()));
 		}
 
-		final Settings additionalSettings = additionalSettingsBuilder.build();
-
+		
+				
 		// first, remove any existing user
 		final Settings.Builder internaluser = load(ConfigConstants.CONFIGNAME_INTERNAL_USERS);
-		boolean userExisted = removeKeysStartingWith(internaluser.internalMap(), username + ".");
 
+		Map<String, String> removedEntries = removeKeysStartingWith(internaluser.internalMap(), username + "."); 
+		boolean userExisted = !removedEntries.isEmpty();
+
+		// when updating an existing user password hash can be blank, which means no changes
+		
+		// sanity checks, hash is mandatory for newly created users
+		if(!userExisted && additionalSettingsBuilder.get("hash") == null) {
+			return badRequestResponse("Please specify either 'hash' or 'password' when creating a new internal user");		
+		}
+
+		// for existing users, hash is optional
+		if(userExisted && additionalSettingsBuilder.get("hash") == null) {
+			// sanity check, this should usually not happen
+			if (!removedEntries.containsKey(username+".hash")) {
+				return internalErrorResponse("Existing user " + username+" has no password, and no new password or hash was specified");
+			}
+			additionalSettingsBuilder.put("hash", removedEntries.get(username+".hash"));
+		}
+		
+		// checks complete, create or update the user
+		final Settings additionalSettings = additionalSettingsBuilder.build();
+		
 		// add user with settings
 		internaluser.put(prependValueToEachKey(additionalSettings.getAsMap(), username + "."));
 		save(client, request, ConfigConstants.CONFIGNAME_INTERNAL_USERS, internaluser);

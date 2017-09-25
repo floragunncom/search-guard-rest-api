@@ -59,7 +59,8 @@ public class ActionGroupsApiAction extends AbstractApiAction {
 
 		final Settings.Builder existing = load(getConfigName());
 		// remove all existing entries
-		boolean existed = removeKeysStartingWith(existing.internalMap(), name + ".");
+		Map<String, String> removedEntries = removeKeysStartingWith(existing.internalMap(), name + ".");
+		boolean existed = !removedEntries.isEmpty();
 		// remove bogus "permissions" from the JSON payload
 		Map<String, String> newSettings = additionalSettingsBuilder.build().getAsMap();
 		newSettings = removeLeadingValueFromEachKey(newSettings, "permissions");

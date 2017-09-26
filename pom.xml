@@ -140,6 +140,41 @@
       <scope>provided</scope>
     </dependency>
 
+    <dependency>
+      <groupId>org.elasticsearch.plugin</groupId>
+      <artifactId>reindex-client</artifactId>
+      <version>${elasticsearch.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.elasticsearch.plugin</groupId>
+      <artifactId>percolator-client</artifactId>
+      <version>${elasticsearch.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.elasticsearch.plugin</groupId>
+      <artifactId>lang-mustache-client</artifactId>
+      <version>${elasticsearch.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.elasticsearch.plugin</groupId>
+      <artifactId>parent-join-client</artifactId>
+      <version>${elasticsearch.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.elasticsearch.plugin</groupId>
+      <artifactId>aggs-matrix-stats-client</artifactId>
+      <version>${elasticsearch.version}</version>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
 
   <build>

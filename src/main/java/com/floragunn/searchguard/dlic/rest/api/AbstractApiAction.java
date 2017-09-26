@@ -61,6 +61,7 @@ import com.floragunn.searchguard.action.configupdate.ConfigUpdateRequest;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateResponse;
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.ConfigurationRepository;
+import com.floragunn.searchguard.configuration.IndexBaseConfigurationRepository;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator.ErrorType;
 import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
@@ -73,8 +74,8 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	protected final Logger log = LogManager.getLogger(this.getClass());
 	
 	private final AdminDNs adminDNs;
-	protected final ConfigurationRepository cl;
-	private final ClusterService cs;
+	protected final IndexBaseConfigurationRepository cl;
+	protected final ClusterService cs;
 	private final PrincipalExtractor principalExtractor;
 	private String searchguardIndex;
 	private final Path configPath;
@@ -84,7 +85,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	}
 
 	protected AbstractApiAction(final Settings settings, final Path configPath, final RestController controller, final Client client,
-			final AdminDNs adminDNs, final ConfigurationRepository cl, final ClusterService cs,
+			final AdminDNs adminDNs, final IndexBaseConfigurationRepository cl, final ClusterService cs,
 			final PrincipalExtractor principalExtractor) {
 		super(settings);
 		this.configPath = configPath;
@@ -164,8 +165,10 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 		final Settings.Builder existing = load(getConfigName());
 		
+		if (log.isTraceEnabled()) {
+			log.trace(additionalSettingsBuilder.build().getAsMap().toString());	
+		}
 		
-		log.trace(additionalSettingsBuilder.build().getAsMap().toString());
 
 		Map<String, String> removedEntries = removeKeysStartingWith(existing.internalMap(), name + "."); 
 		boolean existed = !removedEntries.isEmpty();
@@ -173,7 +176,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		existing.put(prependValueToEachKey(additionalSettingsBuilder.build().getAsMap(), name + "."));
 		save(client, request, getConfigName(), existing);
 		if (existed) {
-			return successResponse(getResourceName() + " " + name + " replaced.", getConfigName());
+			return successResponse(getResourceName() + " " + name + " updated.", getConfigName());
 		} else {
 			return createdResponse(getResourceName() + " " + name + " created.", getConfigName());
 		}

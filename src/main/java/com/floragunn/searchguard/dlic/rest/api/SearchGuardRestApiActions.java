@@ -40,6 +40,7 @@ public class SearchGuardRestApiActions {
 	    handlers.add(new ActionGroupsApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor));
 	    handlers.add(new GetConfigurationApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor));
 	    handlers.add(new FlushCacheApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor));
+	    handlers.add(new LicenseApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor));
 	    return Collections.unmodifiableCollection(handlers);
 	}
 }

@@ -1,7 +1,7 @@
 package com.floragunn.searchguard.dlic.rest.api;
 
 /*
- * Copyright 2016 by floragunn UG (haftungsbeschränkt) - All rights reserved
+ * Copyright 2016 by floragunn GmbH - All rights reserved
  * 
  *
  * Unless required by applicable law or agreed to in writing, software

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- Copyright 2016 by floragunn UG (haftungsbeschränkt) - All rights reserved 
+<!-- Copyright 2016 by floragunn GmbH - All rights reserved 
   Unless required by applicable law or agreed to in writing, software distributed 
   here is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS 
   OF ANY KIND, either express or implied. -->
@@ -66,7 +66,7 @@
   <developers>
     <developer>
       <email>info (at) search-guard (dot) com</email>
-      <name>floragunn UG (haftungsbeschränkt)</name>
+      <name>floragunn GmbH</name>
       <url>http://www.floragunn.com</url>
       <id>floragunncom</id>
     </developer>

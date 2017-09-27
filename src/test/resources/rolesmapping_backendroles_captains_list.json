@@ -1,3 +1,6 @@
 {
-  "backendroles": ["captains", "otherrole"]
+  "backendroles": [
+    "captains",
+    "otherrole"
+  ]
 }

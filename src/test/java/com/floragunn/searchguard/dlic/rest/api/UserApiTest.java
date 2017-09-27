@@ -44,7 +44,7 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 				.executeGetRequest("_searchguard/api/configuration/" + ConfigConstants.CONFIGNAME_INTERNAL_USERS);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		Assert.assertEquals(settings.getAsMap().size(), 2);
+		Assert.assertEquals(settings.getAsMap().size(), 4);
 
 		// --- GET
 

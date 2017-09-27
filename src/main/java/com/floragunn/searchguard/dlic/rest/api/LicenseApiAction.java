@@ -39,6 +39,7 @@ import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestRequest.Method;
+import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.rest.RestResponse;
 import org.elasticsearch.rest.RestStatus;
 
@@ -47,6 +48,7 @@ import com.floragunn.searchguard.action.licenseinfo.LicenseInfoRequest;
 import com.floragunn.searchguard.action.licenseinfo.LicenseInfoResponse;
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.IndexBaseConfigurationRepository;
+import com.floragunn.searchguard.configuration.PrivilegesEvaluator;
 import com.floragunn.searchguard.configuration.SearchGuardLicense;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.dlic.rest.validation.LicenseValidator;
@@ -59,15 +61,21 @@ public class LicenseApiAction extends AbstractApiAction {
 	public final static String CONFIG_LICENSE_KEY = "searchguard.dynamic.license";
 	
 	protected LicenseApiAction(Settings settings, Path configPath, RestController controller, Client client, AdminDNs adminDNs,
-			IndexBaseConfigurationRepository cl, ClusterService cs, PrincipalExtractor principalExtractor) {
-		super(settings, configPath, controller, client, adminDNs, cl, cs, principalExtractor);		
+			IndexBaseConfigurationRepository cl, ClusterService cs, PrincipalExtractor principalExtractor, 
+			final PrivilegesEvaluator evaluator, ThreadPool threadPool) {
+		super(settings, configPath, controller, client, adminDNs, cl, cs, principalExtractor, evaluator, threadPool);		
 		controller.registerHandler(Method.DELETE, "/_searchguard/api/license", this);
 		controller.registerHandler(Method.GET, "/_searchguard/api/license", this);
 		controller.registerHandler(Method.PUT, "/_searchguard/api/license", this);
 		controller.registerHandler(Method.POST, "/_searchguard/api/license", this);
 
 	}
-	
+
+	@Override
+	protected Endpoint getEndpoint() {
+		return Endpoint.LICENSE;
+	}
+
 	@Override
 	protected Tuple<String[], RestResponse> handleGet(RestRequest request, Client client, Builder additionalSettings) throws Throwable {
 		

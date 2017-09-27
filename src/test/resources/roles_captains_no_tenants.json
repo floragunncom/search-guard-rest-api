@@ -1,11 +1,17 @@
 {
   "indices": {
-  	"sf": {
-  	  "*": ["CRUD"]
-  	},
-  	"pub": {
-  	  "*": ["CRUD"]
-  	}
+    "sf": {
+      "*": [
+        "CRUD"
+      ]
+    },
+    "pub": {
+      "*": [
+        "CRUD"
+      ]
+    }
   },
-  "cluster": ["cluster:monitor*"]   
+  "cluster": [
+    "cluster:monitor*"
+  ]
 }

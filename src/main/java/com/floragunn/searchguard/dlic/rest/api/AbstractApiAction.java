@@ -19,13 +19,18 @@ import java.nio.file.Path;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -41,6 +46,7 @@ import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.Settings.Builder;
+import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -54,6 +60,7 @@ import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestRequest.Method;
 import org.elasticsearch.rest.RestResponse;
 import org.elasticsearch.rest.RestStatus;
+import org.elasticsearch.threadpool.ThreadPool;
 
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateAction;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateNodeResponse;
@@ -62,23 +69,29 @@ import com.floragunn.searchguard.action.configupdate.ConfigUpdateResponse;
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.ConfigurationRepository;
 import com.floragunn.searchguard.configuration.IndexBaseConfigurationRepository;
+import com.floragunn.searchguard.configuration.PrivilegesEvaluator;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator.ErrorType;
 import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
 import com.floragunn.searchguard.ssl.util.SSLRequestHelper;
 import com.floragunn.searchguard.ssl.util.SSLRequestHelper.SSLInfo;
 import com.floragunn.searchguard.support.ConfigConstants;
+import com.floragunn.searchguard.user.User;
 
 public abstract class AbstractApiAction extends BaseRestHandler {
 
 	protected final Logger log = LogManager.getLogger(this.getClass());
-	
+
 	private final AdminDNs adminDNs;
 	protected final IndexBaseConfigurationRepository cl;
 	protected final ClusterService cs;
 	private final PrincipalExtractor principalExtractor;
+	final PrivilegesEvaluator evaluator;
+	final ThreadPool threadPool;
 	private String searchguardIndex;
 	private final Path configPath;
+	private final Set<String> allowedRoles = new HashSet<>();
+	private final Map<String, Set<String>> disabledEndpointsForRoles = new HashMap<>();
 
 	static {
 		printLicenseInfo();
@@ -86,7 +99,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 	protected AbstractApiAction(final Settings settings, final Path configPath, final RestController controller, final Client client,
 			final AdminDNs adminDNs, final IndexBaseConfigurationRepository cl, final ClusterService cs,
-			final PrincipalExtractor principalExtractor) {
+			final PrincipalExtractor principalExtractor, final PrivilegesEvaluator evaluator, ThreadPool threadPool) {
 		super(settings);
 		this.configPath = configPath;
 		this.searchguardIndex = settings.get(ConfigConstants.SEARCHGUARD_CONFIG_INDEX_NAME, ConfigConstants.SG_DEFAULT_CONFIG_INDEX);
@@ -94,6 +107,34 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		this.cl = cl;
 		this.cs = cs;
 		this.principalExtractor = principalExtractor;
+		this.evaluator = evaluator;
+		this.threadPool = threadPool;
+		// setup role based permissions
+		allowedRoles.addAll(Arrays.asList(settings.getAsArray(ConfigConstants.SEARCHGUARD_RESTAPI_ROLES_ENABLED)));
+
+		// globally disabled endpoints
+		List<String> globallyDisabledEndpoints = new LinkedList<>();
+		globallyDisabledEndpoints
+				.addAll(Arrays.asList(settings.getAsArray(ConfigConstants.SEARCHGUARD_RESTAPI_ENDPOINTS_DISABLED + ".global")));
+
+		// disabled endpoints per role
+		for (String role : allowedRoles) {
+			Set<String> disabledEndpointsForRole = new HashSet<>();
+			// globally disabled endpoints apply for every role
+			disabledEndpointsForRole.addAll(globallyDisabledEndpoints);
+			// add other endpoints, check that they are valid
+			for (String endpoint : settings.getAsArray(ConfigConstants.SEARCHGUARD_RESTAPI_ENDPOINTS_DISABLED + "." + role)) {
+				try {
+					Endpoint.valueOf(endpoint.toUpperCase());
+					disabledEndpointsForRole.add(endpoint.toUpperCase());
+				} catch (Exception e) {
+					log.warn("The disabled endpoint '{}' configured for role {} is not recognized, skipping it.", endpoint, role);
+				}
+			}
+			if (!disabledEndpointsForRole.isEmpty()) {
+				this.disabledEndpointsForRoles.put(role, disabledEndpointsForRole);
+			}
+		}
 	}
 
 	protected abstract AbstractConfigurationValidator getValidator(final Method method, BytesReference ref);
@@ -101,22 +142,23 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	protected abstract String getResourceName();
 
 	protected abstract String getConfigName();
-	
+
 	protected Tuple<String[], RestResponse> handleApiRequest(final RestRequest request, final Client client)
 			throws Throwable {
-		
+
 		// consume all parameters first so we can return a correct HTTP status, not 400
 		consumeParameters(request);
-		
+
+		// TODO: - Initialize if non-existant
 		// check if SG index has been initialized
-		if(!ensureIndexExists(client)) {
-			return internalErrorResponse(ErrorType.SG_NOT_INITIALIZED.getMessage());			
+		if (!ensureIndexExists(client)) {
+			return internalErrorResponse(ErrorType.SG_NOT_INITIALIZED.getMessage());
 		}
 
 		// validate additional settings, if any
 		AbstractConfigurationValidator validator = getValidator(request.method(), request.content());
 		if (!validator.validateSettings()) {
-		    request.params().clear();
+			request.params().clear();
 			return new Tuple<String[], RestResponse>(new String[0],
 					new BytesRestResponse(RestStatus.BAD_REQUEST, validator.errorsAsXContent()));
 		}
@@ -131,7 +173,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			return handleGet(request, client, validator.settingsBuilder());
 		default:
 			throw new IllegalArgumentException(request.method() + " not supported");
-		}		 
+		}
 	}
 
 	protected Tuple<String[], RestResponse> handleDelete(final RestRequest request, final Client client,
@@ -143,8 +185,8 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		}
 
 		final Settings.Builder existing = load(getConfigName());
-		
-		Map<String, String> removedEntries = removeKeysStartingWith(existing.internalMap(), name + "."); 
+
+		Map<String, String> removedEntries = removeKeysStartingWith(existing.internalMap(), name + ".");
 		boolean modified = !removedEntries.isEmpty();
 
 		if (modified) {
@@ -164,15 +206,14 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		}
 
 		final Settings.Builder existing = load(getConfigName());
-		
-		if (log.isTraceEnabled()) {
-			log.trace(additionalSettingsBuilder.build().getAsMap().toString());	
-		}
-		
 
-		Map<String, String> removedEntries = removeKeysStartingWith(existing.internalMap(), name + "."); 
+		if (log.isTraceEnabled()) {
+			log.trace(additionalSettingsBuilder.build().getAsMap().toString());
+		}
+
+		Map<String, String> removedEntries = removeKeysStartingWith(existing.internalMap(), name + ".");
 		boolean existed = !removedEntries.isEmpty();
-				
+
 		existing.put(prependValueToEachKey(additionalSettingsBuilder.build().getAsMap(), name + "."));
 		save(client, request, getConfigName(), existing);
 		if (existed) {
@@ -220,7 +261,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	protected boolean ensureIndexExists(final Client client) throws Throwable {
 		return cs.state().metaData().hasConcreteIndex(this.searchguardIndex);
 	}
-	
+
 	protected void save(final Client client, final RestRequest request, final String config,
 			final Settings.Builder settings) throws Throwable {
 		final Semaphore sem = new Semaphore(0);
@@ -229,13 +270,12 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 		String type = "sg";
 		String id = config;
-		
-		if(cs.state().metaData().index(this.searchguardIndex).mapping("config") != null) {
-		    type = config;
-	        id = "0";
+
+		if (cs.state().metaData().index(this.searchguardIndex).mapping("config") != null) {
+			type = config;
+			id = "0";
 		}
-		
-		
+
 		client.index(ir.type(type).id(id).setRefreshPolicy(RefreshPolicy.IMMEDIATE)
 				.source(config, toSource(settings)), new ActionListener<IndexResponse>() {
 
@@ -267,41 +307,17 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 	}
 
-	
-	
 	@Override
-    protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
+	protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
 
-	    SSLInfo sslInfo = SSLRequestHelper.getSSLInfo(settings, configPath, request, principalExtractor);
-	    
-	    if (sslInfo == null) {
-            logger.error("No ssl info found");
-            // auditLog.logSgIndexAttempt(request, action); //TODO add method
-            // for rest request
-            request.params().clear();
-            final BytesRestResponse response = new BytesRestResponse(RestStatus.FORBIDDEN, "No ssl info found");
-            return channel -> channel.sendResponse(response);
-        }
-	    
-        X509Certificate[] certs = sslInfo.getX509Certs();
+		// check if request is authorized
+		String authError = checkAccessPermissions(request, client);
 
-		if (certs == null || certs.length == 0) {
-			logger.error("No certificate found");
-			// auditLog.logSgIndexAttempt(request, action); //TODO add method
-			// for rest request
+		if (authError != null) {
+			logger.error("No permission to access REST API.");
+			// auditLog.logSgIndexAttempt(request, action); //TODO add method for rest request
 			request.params().clear();
-			final BytesRestResponse response = new BytesRestResponse(RestStatus.FORBIDDEN, "No certificates");
-			return channel -> channel.sendResponse(response);
-		}
-
-		if (!adminDNs.isAdmin(sslInfo.getPrincipal())) {
-			// auditLog.logSgIndexAttempt(request, action); //TODO add method
-			// for rest request
-		    request.params().clear();
-			logger.error("SG admin permissions required but {} is not an admin",
-			        sslInfo.getPrincipal());
-			final BytesRestResponse response = new BytesRestResponse(RestStatus.FORBIDDEN,
-					"SG admin permissions required");
+			final BytesRestResponse response = new BytesRestResponse(RestStatus.FORBIDDEN, authError);
 			return channel -> channel.sendResponse(response);
 		}
 
@@ -314,8 +330,8 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			if (response.v1().length > 0) {
 
 				final ConfigUpdateRequest cur = new ConfigUpdateRequest(response.v1());
-				//cur.putInContext(ConfigConstants.SG_USER,
-				//		new User((String) request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL)));
+				// cur.putInContext(ConfigConstants.SG_USER,
+				// new User((String) request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL)));
 
 				client.execute(ConfigUpdateAction.INSTANCE, cur, new ActionListener<ConfigUpdateResponse>() {
 
@@ -360,22 +376,108 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		}
 
 		if (exception.size() > 0) {
-		    request.params().clear();
-	        return channel -> channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, exception.get(0).toString()));
+			request.params().clear();
+			return channel -> channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, exception.get(0).toString()));
 		}
 
 		return channel -> channel.sendResponse(response.v2());
 
 	}
 
+	/**
+	 * Check if the current request is allowed to use the REST API and the requested end point. Using an admin certificate grants all
+	 * permissions. A user/role can have restricted end points.
+	 * 
+	 * @return an error message if user does not have access, null otherwise TODO: log failed attempt in audit log
+	 */
+	protected String checkAccessPermissions(RestRequest request, NodeClient client) throws IOException {
+		boolean roleBaseAccessEnabled = !allowedRoles.isEmpty();
+		String roleBasedAccessFailureReason = "";
+
+		// 1. Role based access. Check that user has role suitable for admin access
+		// and that the role has also access to this endpoint.
+		if (roleBaseAccessEnabled) {
+			final User user = (User) threadPool.getThreadContext().getTransient(ConfigConstants.SG_USER);
+			final TransportAddress remoteAddress = (TransportAddress) threadPool.getThreadContext()
+					.getTransient(ConfigConstants.SG_REMOTE_ADDRESS);
+			// map the users SG roles
+			Set<String> userRoles = evaluator.mapSgRoles(user, remoteAddress);
+
+			// check if user has any role that grants access
+			if (!Collections.disjoint(allowedRoles, userRoles)) {
+				// yes, calculate disabled end points. Since a user can have multiple roles, the endpoint
+				// needs to be disabled in all roles.
+				Set<String> disabledEndpointForUser = new HashSet<>();
+				// iterate over all roles and disabled end points. Globally disabled end points are
+				// part of each role based disabled end points.
+
+				// Collect all disabled end points first - streams seem overhead here since collections are small
+				for (String userRole : userRoles) {
+					if (disabledEndpointsForRoles.containsKey(userRole)) {
+						disabledEndpointForUser.addAll(disabledEndpointsForRoles.get(userRole));
+					}
+				}
+				// Make sure to retain only end points configured for all roles
+				for (String userRole : userRoles) {
+					if (disabledEndpointsForRoles.containsKey(userRole)) {
+						disabledEndpointForUser.retainAll(disabledEndpointsForRoles.get(userRole));
+					}
+				}
+				// check if this endpoint is disabled igoring case
+				boolean isDisabled = disabledEndpointForUser.stream().filter(s -> s.equalsIgnoreCase(getEndpoint().name())).findFirst()
+						.isPresent();
+				if (isDisabled) {
+					roleBasedAccessFailureReason = "User " + user.getName() + " with Search Guard Roles " +userRoles+ " does not have any access to endpoint "
+							+ getEndpoint().name();
+					logger.info("User {} with Search Guard Roles {} does not have access to endpoint {}, checking admin TLS certificate now.", user, userRoles,
+							getEndpoint().name());
+				} else {
+					logger.debug("User {} has access to endpoint {}.", user, getEndpoint().name());
+					return null;
+				}
+			} else {
+				// no, but maybe the request contains a client certificate. Remember error reason for better response message later on.
+				roleBasedAccessFailureReason = "User " + user.getName() + " with Search Guard Roles " +userRoles+ " does not have any role privileged for admin access";
+				logger.info("User {} with Search Guard roles {} does not have any role privileged for admin access, checking admin TLS certificate now.", user, userRoles);
+			}
+		}
+
+		// 2. Role based access not enabled or failed.
+		// Check if we have an admin TLS certificate
+		SSLInfo sslInfo = SSLRequestHelper.getSSLInfo(settings, configPath, request, principalExtractor);
+
+		if (sslInfo == null) {
+			// here we log on error level, since authentication finally failed
+			logger.error("No ssl info found in request.");
+			return constructAccessErrorMessage(roleBaseAccessEnabled, roleBasedAccessFailureReason, "No ssl info found in request.");
+		}
+
+		X509Certificate[] certs = sslInfo.getX509Certs();
+
+		if (certs == null || certs.length == 0) {
+			logger.error("No client TLS certificate found in request");
+			return constructAccessErrorMessage(roleBaseAccessEnabled, roleBasedAccessFailureReason,
+					"No client TLS certificate found in request");
+		}
+
+		if (!adminDNs.isAdmin(sslInfo.getPrincipal())) {
+			logger.error("SG admin permissions required but {} is not an admin", sslInfo.getPrincipal());
+			return constructAccessErrorMessage(roleBaseAccessEnabled, roleBasedAccessFailureReason,
+					"SG admin permissions required but " + sslInfo.getPrincipal() + " is not an admin");
+		}
+
+		// access granted
+		return null;
+	}
+
 	protected static BytesReference toSource(final Settings.Builder settingsBuilder) throws IOException {
 		final XContentBuilder builder = XContentFactory.jsonBuilder();
-        builder.startObject(); //1
-        settingsBuilder.build().toXContent(builder, ToXContent.EMPTY_PARAMS);
-        builder.endObject(); //2
-        return builder.bytes(); 
+		builder.startObject(); // 1
+		settingsBuilder.build().toXContent(builder, ToXContent.EMPTY_PARAMS);
+		builder.endObject(); // 2
+		return builder.bytes();
 	}
-        
+
 	protected boolean checkConfigUpdateResponse(final ConfigUpdateResponse response) {
 
 		final int nodeCount = cs.state().getNodes().getNodes().size();
@@ -403,7 +505,6 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		return success;
 	}
 
-
 	protected Settings.Builder copyKeysStartingWith(final Map<String, String> map, final String startWith) {
 		if (map == null || map.isEmpty() || startWith == null || startWith.isEmpty()) {
 			return Settings.builder();
@@ -423,7 +524,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			return Collections.emptyMap();
 		}
 		Map<String, String> removedEntries = new HashMap<>();
-		
+
 		for (final String key : new HashSet<String>(map.keySet())) {
 			if (key != null && key.startsWith(startWith)) {
 				String value = map.remove(key);
@@ -532,51 +633,62 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	}
 
 	protected Tuple<String[], RestResponse> notImplemented(Method method) {
-		return response(RestStatus.NOT_IMPLEMENTED, RestStatus.NOT_IMPLEMENTED.name(), "Method " + method.name() + " not supported for this action.");
+		return response(RestStatus.NOT_IMPLEMENTED, RestStatus.NOT_IMPLEMENTED.name(),
+				"Method " + method.name() + " not supported for this action.");
 	}
-	
+
 	/**
-	 * Consume all defined parameters for the request. Before we handle the request
-	 * in subclasses where we actually need the parameter, some global checks are
-	 * performed, e.g. check whether the SG index exists. Thus, the parameter(s)
-	 * have not been consumed, and ES will always return a 400 with an internal error message.
+	 * Consume all defined parameters for the request. Before we handle the request in subclasses where we actually need the parameter, some
+	 * global checks are performed, e.g. check whether the SG index exists. Thus, the parameter(s) have not been consumed, and ES will
+	 * always return a 400 with an internal error message.
 	 * 
 	 * @param request
 	 */
 	protected void consumeParameters(final RestRequest request) {
 		request.param("name");
 	}
-	
-	private static void printLicenseInfo() {
-        final StringBuilder sb = new StringBuilder();
-        sb.append("******************************************************"+System.lineSeparator());
-        sb.append("Search Guard REST Management API is not free software"+System.lineSeparator());
-        sb.append("for commercial use in production."+System.lineSeparator());
-        sb.append("You have to obtain a license if you "+System.lineSeparator());
-        sb.append("use it in production."+System.lineSeparator());
-        sb.append(System.lineSeparator());
-        sb.append("See https://floragunn.com/searchguard-validate-license"+System.lineSeparator());
-        sb.append("In case of any doubt mail to <sales@floragunn.com>"+System.lineSeparator());
-        sb.append("*****************************************************"+System.lineSeparator());
-        
-        final String licenseInfo = sb.toString();
-        
-        if(!Boolean.getBoolean("sg.display_lic_none")) {
-            
-            if(!Boolean.getBoolean("sg.display_lic_only_stdout")) {
-                LogManager.getLogger(AbstractApiAction.class).warn(licenseInfo);
-                System.err.println(licenseInfo);
-            }
-    
-            System.out.println(licenseInfo);
-        }
-        
-    }
 
-    @Override
-    public String getName() {
-        return getClass().getSimpleName();
-    }
-	
-	
+	private String constructAccessErrorMessage(boolean roleBasedEnabled, String roleBasedAccessFailure, String certBasedAccessFailure) {
+		if (!roleBasedEnabled) {
+			return certBasedAccessFailure;
+		}
+		if (roleBasedAccessFailure == null || roleBasedAccessFailure.length() == 0) {
+			return certBasedAccessFailure;
+		}
+		return roleBasedAccessFailure + "; " + certBasedAccessFailure;
+	}
+
+	private static void printLicenseInfo() {
+		final StringBuilder sb = new StringBuilder();
+		sb.append("******************************************************" + System.lineSeparator());
+		sb.append("Search Guard REST Management API is not free software" + System.lineSeparator());
+		sb.append("for commercial use in production." + System.lineSeparator());
+		sb.append("You have to obtain a license if you " + System.lineSeparator());
+		sb.append("use it in production." + System.lineSeparator());
+		sb.append(System.lineSeparator());
+		sb.append("See https://floragunn.com/searchguard-validate-license" + System.lineSeparator());
+		sb.append("In case of any doubt mail to <sales@floragunn.com>" + System.lineSeparator());
+		sb.append("*****************************************************" + System.lineSeparator());
+
+		final String licenseInfo = sb.toString();
+
+		if (!Boolean.getBoolean("sg.display_lic_none")) {
+
+			if (!Boolean.getBoolean("sg.display_lic_only_stdout")) {
+				LogManager.getLogger(AbstractApiAction.class).warn(licenseInfo);
+				System.err.println(licenseInfo);
+			}
+
+			System.out.println(licenseInfo);
+		}
+
+	}
+
+	@Override
+	public String getName() {
+		return getClass().getSimpleName();
+	}
+
+	protected abstract Endpoint getEndpoint();
+
 }

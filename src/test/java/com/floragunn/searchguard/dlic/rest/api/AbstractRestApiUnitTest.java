@@ -32,15 +32,31 @@ import com.floragunn.searchguard.test.helper.rest.RestHelper.HttpResponse;
 
 public abstract class AbstractRestApiUnitTest extends SingleClusterTest {
 
-    protected RestHelper rh = null;
-    protected boolean init = true;
-    
-    protected final void setup() throws Exception {
-        final Settings nodeSettings = defaultNodeSettings(true);
-        setup(Settings.EMPTY, new DynamicSgConfig(), nodeSettings, init);
-        rh = restHelper();
-    }
-    
+	protected RestHelper rh = null;
+	protected boolean init = true;
+
+	protected final void setup() throws Exception {
+		Settings.Builder builder = Settings.builder();
+
+		builder.put("searchguard.ssl.http.enabled", true)
+				.put("searchguard.ssl.http.keystore_filepath",
+						FileHelper.getAbsoluteFilePathFromClassPath("node-0-keystore.jks"))
+				.put("searchguard.ssl.http.truststore_filepath",
+						FileHelper.getAbsoluteFilePathFromClassPath("truststore.jks"));
+
+		builder.put("searchguard.restapi.roles_enabled.0", "sg_role_klingons");
+		builder.put("searchguard.restapi.roles_enabled.1", "sg_role_vulcans");
+
+		builder.put("searchguard.restapi.endpoints_disabled.global.0", "CACHE");
+
+		builder.put("searchguard.restapi.endpoints_disabled.sg_role_klingons.0", "LICENSE");
+		builder.put("searchguard.restapi.endpoints_disabled.sg_role_klingons.1", "ConfiGuration");
+		builder.put("searchguard.restapi.endpoints_disabled.sg_role_klingons.2", "WRONGType");
+		
+		setup(Settings.EMPTY, new DynamicSgConfig(), builder.build(), init);
+		rh = restHelper();
+	}
+
 	protected void deleteUser(String username) throws Exception {
 		boolean sendHTTPClientCertificate = rh.sendHTTPClientCertificate;
 		rh.sendHTTPClientCertificate = true;
@@ -58,7 +74,6 @@ public abstract class AbstractRestApiUnitTest extends SingleClusterTest {
 		rh.sendHTTPClientCertificate = sendHTTPClientCertificate;
 	}
 
-	
 	protected void addUserWithPassword(String username, String password, String[] roles, int status) throws Exception {
 		boolean sendHTTPClientCertificate = rh.sendHTTPClientCertificate;
 		rh.sendHTTPClientCertificate = true;
@@ -91,7 +106,6 @@ public abstract class AbstractRestApiUnitTest extends SingleClusterTest {
 		rh.sendHTTPClientCertificate = sendHTTPClientCertificate;
 	}
 
-	
 	protected void addUserWithHash(String username, String hash) throws Exception {
 		addUserWithHash(username, hash, HttpStatus.SC_OK);
 	}
@@ -152,29 +166,27 @@ public abstract class AbstractRestApiUnitTest extends SingleClusterTest {
 		rh.executePutRequest("sf/public/0", "{\"some\" : \"value\"}", new Header[0]);
 		rh.sendHTTPClientCertificate = sendHTTPClientCertificate;
 	}
-	
-	/*protected void setupSearchGuardIndex() {
-		Settings tcSettings = Settings.builder()
-		        //.put("cluster.name", ClusterHelper.clustername)
-				.put(defaultNodeSettings(false))
-				.put("searchguard.ssl.transport.keystore_filepath",
-						FileHelper.getAbsoluteFilePathFromClassPath("kirk-keystore.jks"))
-				.put(SSLConfigConstants.SEARCHGUARD_SSL_TRANSPORT_KEYSTORE_ALIAS, "kirk").put("path.home", ".").build();
 
-		try (TransportClient tc = new TransportClientImpl(tcSettings,asCollection(Netty4Plugin.class, SearchGuardPlugin.class))) {
-
-			log.debug("Start transport client to init");
-
-			tc.addTransportAddress(new TransportAddress(new InetSocketAddress(clusterInfo.nodeHost, clusterInfo.nodePort)));
-			Assert.assertEquals(clusterInfo.numNodes,
-					tc.admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().size());
-
-			tc.admin().indices().create(new CreateIndexRequest("searchguard")).actionGet();
-
-
-		}
-		
-	}*/
+	/*
+	 * protected void setupSearchGuardIndex() { Settings tcSettings = Settings.builder() //.put("cluster.name", ClusterHelper.clustername)
+	 * .put(defaultNodeSettings(false)) .put("searchguard.ssl.transport.keystore_filepath",
+	 * FileHelper.getAbsoluteFilePathFromClassPath("kirk-keystore.jks")) .put(SSLConfigConstants.SEARCHGUARD_SSL_TRANSPORT_KEYSTORE_ALIAS,
+	 * "kirk").put("path.home", ".").build();
+	 * 
+	 * try (TransportClient tc = new TransportClientImpl(tcSettings,asCollection(Netty4Plugin.class, SearchGuardPlugin.class))) {
+	 * 
+	 * log.debug("Start transport client to init");
+	 * 
+	 * tc.addTransportAddress(new TransportAddress(new InetSocketAddress(clusterInfo.nodeHost, clusterInfo.nodePort)));
+	 * Assert.assertEquals(clusterInfo.numNodes, tc.admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().size());
+	 * 
+	 * tc.admin().indices().create(new CreateIndexRequest("searchguard")).actionGet();
+	 * 
+	 * 
+	 * }
+	 * 
+	 * }
+	 */
 
 	protected Settings defaultNodeSettings(boolean enableRestSSL) {
 		Settings.Builder builder = Settings.builder();
@@ -188,19 +200,19 @@ public abstract class AbstractRestApiUnitTest extends SingleClusterTest {
 		}
 		return builder.build();
 	}
-	
+
 	protected static class TransportClientImpl extends TransportClient {
 
-        public TransportClientImpl(Settings settings, Collection<Class<? extends Plugin>> plugins) {
-            super(settings, plugins);
-        }
+		public TransportClientImpl(Settings settings, Collection<Class<? extends Plugin>> plugins) {
+			super(settings, plugins);
+		}
 
-        public TransportClientImpl(Settings settings, Settings defaultSettings, Collection<Class<? extends Plugin>> plugins) {
-            super(settings, defaultSettings, plugins, null);
-        }       
-    }
-	
+		public TransportClientImpl(Settings settings, Settings defaultSettings, Collection<Class<? extends Plugin>> plugins) {
+			super(settings, defaultSettings, plugins, null);
+		}
+	}
+
 	protected static Collection<Class<? extends Plugin>> asCollection(Class<? extends Plugin>... plugins) {
-        return Arrays.asList(plugins);
-    }
+		return Arrays.asList(plugins);
+	}
 }

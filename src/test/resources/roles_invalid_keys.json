@@ -1,12 +1,21 @@
 {
   "indizes": {
-  	"sf": {
-  	  "ships": ["READ"],
-  	  "public": ["indices:*"]
-  	},
-  	"pub": {
-  	  "*": ["READ"]
-  	}
+    "sf": {
+      "ships": [
+        "READ"
+      ],
+      "public": [
+        "indices:*"
+      ]
+    },
+    "pub": {
+      "*": [
+        "READ"
+      ]
+    }
   },
-  "kluster": ["cluster:monitor*", "indices:data/read/scroll"]    
+  "kluster": [
+    "cluster:monitor*",
+    "indices:data/read/scroll"
+  ]
 }

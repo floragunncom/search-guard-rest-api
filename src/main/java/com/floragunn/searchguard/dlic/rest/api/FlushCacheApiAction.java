@@ -30,6 +30,7 @@ import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestRequest.Method;
+import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.rest.RestResponse;
 
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateAction;
@@ -37,6 +38,7 @@ import com.floragunn.searchguard.action.configupdate.ConfigUpdateRequest;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateResponse;
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.IndexBaseConfigurationRepository;
+import com.floragunn.searchguard.configuration.PrivilegesEvaluator;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.dlic.rest.validation.NoOpValidator;
 import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
@@ -46,12 +48,17 @@ public class FlushCacheApiAction extends AbstractApiAction {
 	@Inject
 	public FlushCacheApiAction(final Settings settings, final Path configPath, final RestController controller, final Client client,
 			final AdminDNs adminDNs, final IndexBaseConfigurationRepository cl, final ClusterService cs,
-            final PrincipalExtractor principalExtractor) {
-		super(settings, configPath, controller, client, adminDNs, cl, cs, principalExtractor);
+            final PrincipalExtractor principalExtractor, final PrivilegesEvaluator evaluator, ThreadPool threadPool) {
+		super(settings, configPath, controller, client, adminDNs, cl, cs, principalExtractor, evaluator, threadPool);
 		controller.registerHandler(Method.DELETE, "/_searchguard/api/cache", this);
 		controller.registerHandler(Method.GET, "/_searchguard/api/cache", this);
 		controller.registerHandler(Method.PUT, "/_searchguard/api/cache", this);
 		controller.registerHandler(Method.POST, "/_searchguard/api/cache", this);
+	}
+
+	@Override
+	protected Endpoint getEndpoint() {
+		return Endpoint.CACHE;
 	}
 
 	@Override

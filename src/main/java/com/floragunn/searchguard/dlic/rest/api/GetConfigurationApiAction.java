@@ -27,11 +27,13 @@ import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestRequest.Method;
+import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.rest.RestResponse;
 import org.elasticsearch.rest.RestStatus;
 
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.IndexBaseConfigurationRepository;
+import com.floragunn.searchguard.configuration.PrivilegesEvaluator;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.dlic.rest.validation.NoOpValidator;
 import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
@@ -43,12 +45,16 @@ public class GetConfigurationApiAction extends AbstractApiAction {
 	@Inject
 	public GetConfigurationApiAction(final Settings settings, final Path configPath, final RestController controller, final Client client,
 			final AdminDNs adminDNs, final IndexBaseConfigurationRepository cl, final ClusterService cs,
-            final PrincipalExtractor principalExtractor) {
-		super(settings, configPath, controller, client, adminDNs, cl, cs, principalExtractor);
+            final PrincipalExtractor principalExtractor, final PrivilegesEvaluator evaluator, ThreadPool threadPool) {
+		super(settings, configPath, controller, client, adminDNs, cl, cs, principalExtractor, evaluator, threadPool);
 		controller.registerHandler(Method.GET, "/_searchguard/api/configuration/{configname}", this);
 	}
 
-	
+	@Override
+	protected Endpoint getEndpoint() {
+		return Endpoint.CONFIGURATION;
+	}
+
 	@Override
 	protected Tuple<String[], RestResponse> handleGet(RestRequest request, Client client,
 			final Settings.Builder additionalSettingsBuilder) throws Throwable {

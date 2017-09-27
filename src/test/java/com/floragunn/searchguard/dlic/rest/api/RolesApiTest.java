@@ -69,9 +69,11 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
 		// add user picard, role starfleet, maps to sg_role_starfleet
 		addUserWithPassword("picard", "picard", new String[] { "starfleet", "captains" }, HttpStatus.SC_CREATED);
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
-		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
+		// TODO: only one doctype allowed for ES6
+		//checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
 		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
-		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
+		// TODO: only one doctype allowed for ES6
+		//checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
 
 		// -- DELETE
 
@@ -88,17 +90,20 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
 		rh.sendHTTPClientCertificate = false;
 		// only starfleet role left, write access to ships is forbidden now
 		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 1);
-		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
-		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
+		// TODO: only one doctype allowed for ES6
+		//checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
+		//checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
 
 		rh.sendHTTPClientCertificate = true;
 		// remove also starfleet role, nothing is allowed anymore
 		response = rh.executeDeleteRequest("/_searchguard/api/roles/sg_role_starfleet", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 0);
-		checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "public", 0);
+		// TODO: only one doctype allowed for ES6
+		//checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "public", 0);
 		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 0);
-		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "public", 0);
+		// TODO: only one doctype allowed for ES6
+		// checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "public", 0);
 
 		// -- PUT
 		// put with empty roles, must fail
@@ -141,9 +146,11 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
 		Assert.assertEquals(HttpStatus.SC_CREATED, response.getStatusCode());
 		rh.sendHTTPClientCertificate = false;
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
-		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
+		// TODO: only one doctype allowed for ES6
+		//checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
 		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 0);
-		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
+		// TODO: only one doctype allowed for ES6
+		// checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
 
 		rh.sendHTTPClientCertificate = true;
 
@@ -153,9 +160,11 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
 		Assert.assertEquals(HttpStatus.SC_CREATED, response.getStatusCode());
 		rh.sendHTTPClientCertificate = false;
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
-		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
+		// TODO: only one doctype allowed for ES6
+		//checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
 		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
-		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
+		// TODO: only one doctype allowed for ES6
+		//checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
 
 		rh.sendHTTPClientCertificate = true;
 		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet_captains",

@@ -30,10 +30,12 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestRequest.Method;
+import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.rest.RestResponse;
 
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.IndexBaseConfigurationRepository;
+import com.floragunn.searchguard.configuration.PrivilegesEvaluator;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.dlic.rest.validation.InternalUsersValidator;
 import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
@@ -44,14 +46,19 @@ public class UserApiAction extends AbstractApiAction {
 	@Inject
 	public UserApiAction(final Settings settings, final Path configPath, final RestController controller, final Client client,
 			final AdminDNs adminDNs, final IndexBaseConfigurationRepository cl, final ClusterService cs,
-            final PrincipalExtractor principalExtractor) {
-		super(settings, configPath, controller, client, adminDNs, cl, cs, principalExtractor);
+            final PrincipalExtractor principalExtractor, final PrivilegesEvaluator evaluator, ThreadPool threadPool) {
+		super(settings, configPath, controller, client, adminDNs, cl, cs, principalExtractor, evaluator, threadPool);
 		controller.registerHandler(Method.GET, "/_searchguard/api/user/{name}", this);
 		controller.registerHandler(Method.GET, "/_searchguard/api/user/", this);
 		controller.registerHandler(Method.DELETE, "/_searchguard/api/user/{name}", this);
 		controller.registerHandler(Method.PUT, "/_searchguard/api/user/{name}", this);
 	}
 
+	@Override
+	protected Endpoint getEndpoint() {
+		return Endpoint.USER;
+	}
+	
 	@Override
 	protected Tuple<String[], RestResponse> handlePut(final RestRequest request, final Client client,
 			final Settings.Builder additionalSettingsBuilder) throws Throwable {

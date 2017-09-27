@@ -39,9 +39,9 @@ import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestRequest.Method;
-import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.rest.RestResponse;
 import org.elasticsearch.rest.RestStatus;
+import org.elasticsearch.threadpool.ThreadPool;
 
 import com.floragunn.searchguard.action.licenseinfo.LicenseInfoAction;
 import com.floragunn.searchguard.action.licenseinfo.LicenseInfoRequest;
@@ -53,8 +53,8 @@ import com.floragunn.searchguard.configuration.SearchGuardLicense;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.dlic.rest.validation.LicenseValidator;
 import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
-import com.floragunn.searchguard.support.ArmoredPgpDecoder;
 import com.floragunn.searchguard.support.ConfigConstants;
+import com.floragunn.searchguard.support.LicenseHelper;
 
 public class LicenseApiAction extends AbstractApiAction {
 	
@@ -146,7 +146,7 @@ public class LicenseApiAction extends AbstractApiAction {
 		String plaintextLicense;
 		
 		try {
-			plaintextLicense = ArmoredPgpDecoder.decodeBase64(licenseString);
+			plaintextLicense = LicenseHelper.validateLicense(licenseString);					
 		} catch (Exception e) {
 			log.error("Could not decode license {} due to {}", licenseString, e);
 			return badRequestResponse("License could not be decoded due to: " + e.getMessage());

@@ -41,6 +41,7 @@ public class IndexMissingTest extends AbstractRestApiUnitTest {
 	}
 	
 	protected void testHttpOperations() throws Exception {
+		
 		rh.keystore = "kirk-keystore.jks";
 		rh.sendHTTPClientCertificate = true;
 
@@ -64,7 +65,6 @@ public class IndexMissingTest extends AbstractRestApiUnitTest {
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		settingsAsMap = settings.getAsMap();
 		Assert.assertEquals(ErrorType.SG_NOT_INITIALIZED.getMessage(), settingsAsMap.get("message"));
-
 		
 		// GET actiongroups
 		response = rh.executeGetRequest("_searchguard/api/actiongroup/READ");
@@ -79,7 +79,6 @@ public class IndexMissingTest extends AbstractRestApiUnitTest {
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		settingsAsMap = settings.getAsMap();
 		Assert.assertEquals(ErrorType.SG_NOT_INITIALIZED.getMessage(), settingsAsMap.get("message"));
-
 		
 		// PUT request
 		response = rh.executePutRequest("/_searchguard/api/actiongroup/READ", FileHelper.loadFile("actiongroup_read.json"), new Header[0]);

@@ -64,9 +64,11 @@ public class ActionGroupsApiTest extends AbstractRestApiUnitTest {
 		// add user picard, role starfleet, maps to sg_role_starfleet
 		addUserWithPassword("picard", "picard", new String[] { "starfleet" }, HttpStatus.SC_CREATED);
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
-		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
+		// TODO: only one doctype allowed for ES6
+		// checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
 		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 0);
-		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
+		// TODO: only one doctype allowed for ES6
+		//checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
 
 		// -- DELETE
 		// Non-existing role

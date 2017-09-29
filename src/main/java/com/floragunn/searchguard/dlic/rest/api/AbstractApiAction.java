@@ -52,6 +52,7 @@ import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
@@ -76,6 +77,7 @@ import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
 import com.floragunn.searchguard.ssl.util.SSLRequestHelper;
 import com.floragunn.searchguard.ssl.util.SSLRequestHelper.SSLInfo;
 import com.floragunn.searchguard.support.ConfigConstants;
+import com.floragunn.searchguard.test.helper.file.FileHelper;
 import com.floragunn.searchguard.user.User;
 
 public abstract class AbstractApiAction extends BaseRestHandler {
@@ -145,15 +147,6 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 	protected Tuple<String[], RestResponse> handleApiRequest(final RestRequest request, final Client client)
 			throws Throwable {
-
-		// consume all parameters first so we can return a correct HTTP status, not 400
-		consumeParameters(request);
-
-		// TODO: - Initialize if non-existant
-		// check if SG index has been initialized
-		if (!ensureIndexExists(client)) {
-			return internalErrorResponse(ErrorType.SG_NOT_INITIALIZED.getMessage());
-		}
 
 		// validate additional settings, if any
 		AbstractConfigurationValidator validator = getValidator(request.method(), request.content());
@@ -258,7 +251,68 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		return cl.getConfiguration(config);
 	}
 
-	protected boolean ensureIndexExists(final Client client) throws Throwable {
+	protected boolean ensureIndexExists(final Client client) {
+		if (!cs.state().metaData().hasConcreteIndex(this.searchguardIndex)) {
+			log.warn("Search Guard index does not exist yet, try to creat it.");
+
+			final Semaphore sem = new Semaphore(0);
+			final List<Exception> exceptions = new LinkedList<>();
+
+			client.index(new IndexRequest(searchguardIndex)
+					.type("sg")
+					.id("tattr")
+					.setRefreshPolicy(RefreshPolicy.IMMEDIATE)
+					.source("{\"val\": " + System.currentTimeMillis() + "}", XContentType.JSON), new ActionListener<IndexResponse>() {
+
+						@Override
+						public void onResponse(final IndexResponse response) {
+							sem.release();
+							if (logger.isDebugEnabled()) {
+								logger.debug("Search Guard index successfully created.");
+							}
+						}
+
+						@Override
+						public void onFailure(final Exception e) {
+							sem.release();
+							exceptions.add(e);
+							logger.error("Cannot create Search Guard index due to {}", e, e);
+						}
+					});
+
+			try {
+				if (!sem.tryAcquire(1, TimeUnit.MINUTES)) {
+					// timeout
+					logger.error("Cannot create Search Guard index due to a timeout.");
+					return false;
+				}
+
+				if (exceptions.size() > 0) {
+					return false;
+				}
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				return false;
+			}
+		}
+		
+		client.index(new IndexRequest(searchguardIndex)
+				.type("sg")
+				.id(ConfigConstants.CONFIGNAME_ROLES)
+				.setRefreshPolicy(RefreshPolicy.IMMEDIATE)
+				.source("{}", XContentType.JSON), new ActionListener<IndexResponse>() {
+
+					@Override
+					public void onResponse(final IndexResponse response) {
+						logger.info(response.status());
+					}
+
+					@Override
+					public void onFailure(final Exception e) {
+						logger.error(e);
+					}
+				});
+
 		return cs.state().metaData().hasConcreteIndex(this.searchguardIndex);
 	}
 
@@ -304,11 +358,21 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		if (exception.size() > 0) {
 			throw exception.get(0);
 		}
-
+        
 	}
 
 	@Override
 	protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
+
+		// consume all parameters first so we can return a correct HTTP status, not 400
+		consumeParameters(request);
+
+		// TODO: - Initialize if non-existant
+		// check if SG index has been initialized
+		if (!ensureIndexExists(client)) {
+			return channel -> channel
+					.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, ErrorType.SG_NOT_INITIALIZED.getMessage()));
+		}
 
 		// check if request is authorized
 		String authError = checkAccessPermissions(request, client);
@@ -391,11 +455,27 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	 * @return an error message if user does not have access, null otherwise TODO: log failed attempt in audit log
 	 */
 	protected String checkAccessPermissions(RestRequest request, NodeClient client) throws IOException {
-		boolean roleBaseAccessEnabled = !allowedRoles.isEmpty();
-		String roleBasedAccessFailureReason = "";
 
-		// 1. Role based access. Check that user has role suitable for admin access
+		String certBasedAccessFailureReason = checkAdminCertBasedAccessPermissions(request, client);
+		// TLS access granted, skip checking roles
+		if (certBasedAccessFailureReason == null) {
+			return null;
+		}
+		
+		String roleBasedAccessFailureReason = checkRoleBasedAccessPermissions(request, client);
+
+		// Role based access granted
+		if (roleBasedAccessFailureReason == null) {
+			return null;
+		}
+
+		return constructAccessErrorMessage(roleBasedAccessFailureReason, certBasedAccessFailureReason);
+	}
+
+	private String checkRoleBasedAccessPermissions(RestRequest request, NodeClient client) {
+		// Role based access. Check that user has role suitable for admin access
 		// and that the role has also access to this endpoint.
+		boolean roleBaseAccessEnabled = !allowedRoles.isEmpty();
 		if (roleBaseAccessEnabled) {
 			final User user = (User) threadPool.getThreadContext().getTransient(ConfigConstants.SG_USER);
 			final TransportAddress remoteAddress = (TransportAddress) threadPool.getThreadContext()
@@ -427,46 +507,46 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 				boolean isDisabled = disabledEndpointForUser.stream().filter(s -> s.equalsIgnoreCase(getEndpoint().name())).findFirst()
 						.isPresent();
 				if (isDisabled) {
-					roleBasedAccessFailureReason = "User " + user.getName() + " with Search Guard Roles " +userRoles+ " does not have any access to endpoint "
-							+ getEndpoint().name();
-					logger.info("User {} with Search Guard Roles {} does not have access to endpoint {}, checking admin TLS certificate now.", user, userRoles,
+					logger.info(
+							"User {} with Search Guard Roles {} does not have access to endpoint {}, checking admin TLS certificate now.",
+							user, userRoles,
 							getEndpoint().name());
+					return "User " + user.getName() + " with Search Guard Roles " + userRoles + " does not have any access to endpoint "
+							+ getEndpoint().name();
 				} else {
 					logger.debug("User {} has access to endpoint {}.", user, getEndpoint().name());
 					return null;
 				}
 			} else {
 				// no, but maybe the request contains a client certificate. Remember error reason for better response message later on.
-				roleBasedAccessFailureReason = "User " + user.getName() + " with Search Guard Roles " +userRoles+ " does not have any role privileged for admin access";
 				logger.info("User {} with Search Guard roles {} does not have any role privileged for admin access, checking admin TLS certificate now.", user, userRoles);
+				return "User " + user.getName() + " with Search Guard Roles " + userRoles + " does not have any role privileged for admin access";
 			}
 		}
+		return "Role based access not enabled.";
+	}
 
-		// 2. Role based access not enabled or failed.
-		// Check if we have an admin TLS certificate
+	private String checkAdminCertBasedAccessPermissions(RestRequest request, NodeClient client) throws IOException {
+		// Certificate based access, Check if we have an admin TLS certificate
 		SSLInfo sslInfo = SSLRequestHelper.getSSLInfo(settings, configPath, request, principalExtractor);
 
 		if (sslInfo == null) {
 			// here we log on error level, since authentication finally failed
 			logger.error("No ssl info found in request.");
-			return constructAccessErrorMessage(roleBaseAccessEnabled, roleBasedAccessFailureReason, "No ssl info found in request.");
+			return "No ssl info found in request.";
 		}
 
 		X509Certificate[] certs = sslInfo.getX509Certs();
 
 		if (certs == null || certs.length == 0) {
 			logger.error("No client TLS certificate found in request");
-			return constructAccessErrorMessage(roleBaseAccessEnabled, roleBasedAccessFailureReason,
-					"No client TLS certificate found in request");
+			return "No client TLS certificate found in request";
 		}
 
 		if (!adminDNs.isAdmin(sslInfo.getPrincipal())) {
 			logger.error("SG admin permissions required but {} is not an admin", sslInfo.getPrincipal());
-			return constructAccessErrorMessage(roleBaseAccessEnabled, roleBasedAccessFailureReason,
-					"SG admin permissions required but " + sslInfo.getPrincipal() + " is not an admin");
+			return "SG admin permissions required but " + sslInfo.getPrincipal() + " is not an admin";
 		}
-
-		// access granted
 		return null;
 	}
 
@@ -648,13 +728,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		request.param("name");
 	}
 
-	private String constructAccessErrorMessage(boolean roleBasedEnabled, String roleBasedAccessFailure, String certBasedAccessFailure) {
-		if (!roleBasedEnabled) {
-			return certBasedAccessFailure;
-		}
-		if (roleBasedAccessFailure == null || roleBasedAccessFailure.length() == 0) {
-			return certBasedAccessFailure;
-		}
+	private String constructAccessErrorMessage(String roleBasedAccessFailure, String certBasedAccessFailure) {
 		return roleBasedAccessFailure + "; " + certBasedAccessFailure;
 	}
 

@@ -43,6 +43,19 @@ public abstract class AbstractRestApiUnitTest extends SingleClusterTest {
 						FileHelper.getAbsoluteFilePathFromClassPath("node-0-keystore.jks"))
 				.put("searchguard.ssl.http.truststore_filepath",
 						FileHelper.getAbsoluteFilePathFromClassPath("truststore.jks"));
+		
+		setup(Settings.EMPTY, new DynamicSgConfig(), builder.build(), init);
+		rh = restHelper();
+	}
+
+	protected final void setupWithRestRoles() throws Exception {
+		Settings.Builder builder = Settings.builder();
+
+		builder.put("searchguard.ssl.http.enabled", true)
+				.put("searchguard.ssl.http.keystore_filepath",
+						FileHelper.getAbsoluteFilePathFromClassPath("node-0-keystore.jks"))
+				.put("searchguard.ssl.http.truststore_filepath",
+						FileHelper.getAbsoluteFilePathFromClassPath("truststore.jks"));
 
 		builder.put("searchguard.restapi.roles_enabled.0", "sg_role_klingons");
 		builder.put("searchguard.restapi.roles_enabled.1", "sg_role_vulcans");

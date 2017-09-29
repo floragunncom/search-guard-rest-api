@@ -23,6 +23,7 @@ public class ActionGroupValidator extends AbstractConfigurationValidator {
 		super(method, ref);
 		this.payloadMandatory = true;
 		allowedKeys.put("permissions", DataType.ARRAY);
+		mandatoryKeys.add("permissions");
 	}
 
 }

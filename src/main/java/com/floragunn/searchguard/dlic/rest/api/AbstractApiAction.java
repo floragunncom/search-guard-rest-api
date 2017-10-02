@@ -84,17 +84,12 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 	protected final Logger log = LogManager.getLogger(this.getClass());
 
-	private final AdminDNs adminDNs;
 	protected final IndexBaseConfigurationRepository cl;
-	protected final ClusterService cs;
-	private final PrincipalExtractor principalExtractor;
-	final PrivilegesEvaluator evaluator;
+	protected final ClusterService cs;		
 	final ThreadPool threadPool;
 	private String searchguardIndex;
-	private final Path configPath;
-	private final Set<String> allowedRoles = new HashSet<>();
-	private final Map<String, Set<String>> disabledEndpointsForRoles = new HashMap<>();
-
+	private final RestApiPrivilegesEvaluator restApiPrivilegesEvaluator;
+	
 	static {
 		printLicenseInfo();
 	}
@@ -103,40 +98,11 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			final AdminDNs adminDNs, final IndexBaseConfigurationRepository cl, final ClusterService cs,
 			final PrincipalExtractor principalExtractor, final PrivilegesEvaluator evaluator, ThreadPool threadPool) {
 		super(settings);
-		this.configPath = configPath;
-		this.searchguardIndex = settings.get(ConfigConstants.SEARCHGUARD_CONFIG_INDEX_NAME, ConfigConstants.SG_DEFAULT_CONFIG_INDEX);
-		this.adminDNs = adminDNs;
+		this.searchguardIndex = settings.get(ConfigConstants.SEARCHGUARD_CONFIG_INDEX_NAME, ConfigConstants.SG_DEFAULT_CONFIG_INDEX);		
 		this.cl = cl;
 		this.cs = cs;
-		this.principalExtractor = principalExtractor;
-		this.evaluator = evaluator;
 		this.threadPool = threadPool;
-		// setup role based permissions
-		allowedRoles.addAll(Arrays.asList(settings.getAsArray(ConfigConstants.SEARCHGUARD_RESTAPI_ROLES_ENABLED)));
-
-		// globally disabled endpoints
-		List<String> globallyDisabledEndpoints = new LinkedList<>();
-		globallyDisabledEndpoints
-				.addAll(Arrays.asList(settings.getAsArray(ConfigConstants.SEARCHGUARD_RESTAPI_ENDPOINTS_DISABLED + ".global")));
-
-		// disabled endpoints per role
-		for (String role : allowedRoles) {
-			Set<String> disabledEndpointsForRole = new HashSet<>();
-			// globally disabled endpoints apply for every role
-			disabledEndpointsForRole.addAll(globallyDisabledEndpoints);
-			// add other endpoints, check that they are valid
-			for (String endpoint : settings.getAsArray(ConfigConstants.SEARCHGUARD_RESTAPI_ENDPOINTS_DISABLED + "." + role)) {
-				try {
-					Endpoint.valueOf(endpoint.toUpperCase());
-					disabledEndpointsForRole.add(endpoint.toUpperCase());
-				} catch (Exception e) {
-					log.warn("The disabled endpoint '{}' configured for role {} is not recognized, skipping it.", endpoint, role);
-				}
-			}
-			if (!disabledEndpointsForRole.isEmpty()) {
-				this.disabledEndpointsForRoles.put(role, disabledEndpointsForRole);
-			}
-		}
+		this.restApiPrivilegesEvaluator = new RestApiPrivilegesEvaluator(settings, adminDNs, evaluator, principalExtractor, configPath, threadPool);
 	}
 
 	protected abstract AbstractConfigurationValidator getValidator(final Method method, BytesReference ref);
@@ -375,10 +341,10 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		}
 
 		// check if request is authorized
-		String authError = checkAccessPermissions(request, client);
+		String authError = restApiPrivilegesEvaluator.checkAccessPermissions(request, getEndpoint());
 
 		if (authError != null) {
-			logger.error("No permission to access REST API.");
+			logger.error("No permission to access REST API: " + authError);
 			// auditLog.logSgIndexAttempt(request, action); //TODO add method for rest request
 			request.params().clear();
 			final BytesRestResponse response = new BytesRestResponse(RestStatus.FORBIDDEN, authError);
@@ -446,108 +412,6 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 		return channel -> channel.sendResponse(response.v2());
 
-	}
-
-	/**
-	 * Check if the current request is allowed to use the REST API and the requested end point. Using an admin certificate grants all
-	 * permissions. A user/role can have restricted end points.
-	 * 
-	 * @return an error message if user does not have access, null otherwise TODO: log failed attempt in audit log
-	 */
-	protected String checkAccessPermissions(RestRequest request, NodeClient client) throws IOException {
-
-		String certBasedAccessFailureReason = checkAdminCertBasedAccessPermissions(request, client);
-		// TLS access granted, skip checking roles
-		if (certBasedAccessFailureReason == null) {
-			return null;
-		}
-		
-		String roleBasedAccessFailureReason = checkRoleBasedAccessPermissions(request, client);
-
-		// Role based access granted
-		if (roleBasedAccessFailureReason == null) {
-			return null;
-		}
-
-		return constructAccessErrorMessage(roleBasedAccessFailureReason, certBasedAccessFailureReason);
-	}
-
-	private String checkRoleBasedAccessPermissions(RestRequest request, NodeClient client) {
-		// Role based access. Check that user has role suitable for admin access
-		// and that the role has also access to this endpoint.
-		boolean roleBaseAccessEnabled = !allowedRoles.isEmpty();
-		if (roleBaseAccessEnabled) {
-			final User user = (User) threadPool.getThreadContext().getTransient(ConfigConstants.SG_USER);
-			final TransportAddress remoteAddress = (TransportAddress) threadPool.getThreadContext()
-					.getTransient(ConfigConstants.SG_REMOTE_ADDRESS);
-			// map the users SG roles
-			Set<String> userRoles = evaluator.mapSgRoles(user, remoteAddress);
-
-			// check if user has any role that grants access
-			if (!Collections.disjoint(allowedRoles, userRoles)) {
-				// yes, calculate disabled end points. Since a user can have multiple roles, the endpoint
-				// needs to be disabled in all roles.
-				Set<String> disabledEndpointForUser = new HashSet<>();
-				// iterate over all roles and disabled end points. Globally disabled end points are
-				// part of each role based disabled end points.
-
-				// Collect all disabled end points first - streams seem overhead here since collections are small
-				for (String userRole : userRoles) {
-					if (disabledEndpointsForRoles.containsKey(userRole)) {
-						disabledEndpointForUser.addAll(disabledEndpointsForRoles.get(userRole));
-					}
-				}
-				// Make sure to retain only end points configured for all roles
-				for (String userRole : userRoles) {
-					if (disabledEndpointsForRoles.containsKey(userRole)) {
-						disabledEndpointForUser.retainAll(disabledEndpointsForRoles.get(userRole));
-					}
-				}
-				// check if this endpoint is disabled igoring case
-				boolean isDisabled = disabledEndpointForUser.stream().filter(s -> s.equalsIgnoreCase(getEndpoint().name())).findFirst()
-						.isPresent();
-				if (isDisabled) {
-					logger.info(
-							"User {} with Search Guard Roles {} does not have access to endpoint {}, checking admin TLS certificate now.",
-							user, userRoles,
-							getEndpoint().name());
-					return "User " + user.getName() + " with Search Guard Roles " + userRoles + " does not have any access to endpoint "
-							+ getEndpoint().name();
-				} else {
-					logger.debug("User {} has access to endpoint {}.", user, getEndpoint().name());
-					return null;
-				}
-			} else {
-				// no, but maybe the request contains a client certificate. Remember error reason for better response message later on.
-				logger.info("User {} with Search Guard roles {} does not have any role privileged for admin access, checking admin TLS certificate now.", user, userRoles);
-				return "User " + user.getName() + " with Search Guard Roles " + userRoles + " does not have any role privileged for admin access";
-			}
-		}
-		return "Role based access not enabled.";
-	}
-
-	private String checkAdminCertBasedAccessPermissions(RestRequest request, NodeClient client) throws IOException {
-		// Certificate based access, Check if we have an admin TLS certificate
-		SSLInfo sslInfo = SSLRequestHelper.getSSLInfo(settings, configPath, request, principalExtractor);
-
-		if (sslInfo == null) {
-			// here we log on error level, since authentication finally failed
-			logger.error("No ssl info found in request.");
-			return "No ssl info found in request.";
-		}
-
-		X509Certificate[] certs = sslInfo.getX509Certs();
-
-		if (certs == null || certs.length == 0) {
-			logger.error("No client TLS certificate found in request");
-			return "No client TLS certificate found in request";
-		}
-
-		if (!adminDNs.isAdmin(sslInfo.getPrincipal())) {
-			logger.error("SG admin permissions required but {} is not an admin", sslInfo.getPrincipal());
-			return "SG admin permissions required but " + sslInfo.getPrincipal() + " is not an admin";
-		}
-		return null;
 	}
 
 	protected static BytesReference toSource(final Settings.Builder settingsBuilder) throws IOException {
@@ -726,10 +590,6 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	 */
 	protected void consumeParameters(final RestRequest request) {
 		request.param("name");
-	}
-
-	private String constructAccessErrorMessage(String roleBasedAccessFailure, String certBasedAccessFailure) {
-		return roleBasedAccessFailure + "; " + certBasedAccessFailure;
 	}
 
 	private static void printLicenseInfo() {

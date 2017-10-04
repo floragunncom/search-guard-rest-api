@@ -37,13 +37,14 @@ public class SearchGuardRestApiActions {
 	        AdminDNs adminDns, IndexBaseConfigurationRepository cr, ClusterService cs, PrincipalExtractor principalExtractor, 
 	        final PrivilegesEvaluator evaluator, ThreadPool threadPool) {
 	    final List<RestHandler> handlers = new ArrayList<RestHandler>(6);
-	    handlers.add(new UserApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor, evaluator, threadPool));
+	    handlers.add(new InternalUsersApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor, evaluator, threadPool));
 	    handlers.add(new RolesMappingApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor, evaluator, threadPool));
 	    handlers.add(new RolesApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor, evaluator, threadPool));
 	    handlers.add(new ActionGroupsApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor, evaluator, threadPool));
 	    handlers.add(new GetConfigurationApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor, evaluator, threadPool));
 	    handlers.add(new FlushCacheApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor, evaluator, threadPool));
 	    handlers.add(new LicenseApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor, evaluator, threadPool));
+	    handlers.add(new PermissionsInfoAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor, evaluator, threadPool));
 	    return Collections.unmodifiableCollection(handlers);
 	}
 }

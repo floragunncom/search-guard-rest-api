@@ -40,6 +40,10 @@ import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
 import com.floragunn.searchguard.support.ConfigConstants;
 import com.google.common.base.Joiner;
 
+/**
+ * @deprecated Use GET endpoints without resource ID in resource specific endpoints, e.g. _searchguard/api/roles/
+ * Will be removed in SG7.
+ */
 public class GetConfigurationApiAction extends AbstractApiAction {
 
 	@Inject
@@ -52,7 +56,7 @@ public class GetConfigurationApiAction extends AbstractApiAction {
 
 	@Override
 	protected Endpoint getEndpoint() {
-		return Endpoint.CONFIGURATION;
+		return Endpoint.GETCONFIGURATION;
 	}
 
 	@Override

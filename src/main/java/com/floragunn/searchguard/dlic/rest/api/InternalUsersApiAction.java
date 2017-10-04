@@ -27,11 +27,13 @@ import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestRequest.Method;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.rest.RestResponse;
+import org.elasticsearch.rest.RestStatus;
 
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.IndexBaseConfigurationRepository;
@@ -41,31 +43,45 @@ import com.floragunn.searchguard.dlic.rest.validation.InternalUsersValidator;
 import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
 import com.floragunn.searchguard.support.ConfigConstants;
 
-public class UserApiAction extends AbstractApiAction {
+public class InternalUsersApiAction extends AbstractApiAction {
 
 	@Inject
-	public UserApiAction(final Settings settings, final Path configPath, final RestController controller, final Client client,
+	public InternalUsersApiAction(final Settings settings, final Path configPath, final RestController controller, final Client client,
 			final AdminDNs adminDNs, final IndexBaseConfigurationRepository cl, final ClusterService cs,
             final PrincipalExtractor principalExtractor, final PrivilegesEvaluator evaluator, ThreadPool threadPool) {
 		super(settings, configPath, controller, client, adminDNs, cl, cs, principalExtractor, evaluator, threadPool);
+
+		// legacy mapping for backwards compatibility
+		// TODO: remove in SG7
 		controller.registerHandler(Method.GET, "/_searchguard/api/user/{name}", this);
 		controller.registerHandler(Method.GET, "/_searchguard/api/user/", this);
 		controller.registerHandler(Method.DELETE, "/_searchguard/api/user/{name}", this);
 		controller.registerHandler(Method.PUT, "/_searchguard/api/user/{name}", this);
+
+		// corrected mapping, introduced in SG6
+		controller.registerHandler(Method.GET, "/_searchguard/api/internalusers/{name}", this);
+		controller.registerHandler(Method.GET, "/_searchguard/api/internalusers/", this);
+		controller.registerHandler(Method.DELETE, "/_searchguard/api/internalusers/{name}", this);
+		controller.registerHandler(Method.PUT, "/_searchguard/api/internalusers/{name}", this);
+
 	}
 
 	@Override
 	protected Endpoint getEndpoint() {
-		return Endpoint.USER;
+		return Endpoint.INTERNALUSERS;
 	}
 	
 	@Override
 	protected Tuple<String[], RestResponse> handlePut(final RestRequest request, final Client client,
 			final Settings.Builder additionalSettingsBuilder) throws Throwable {
+		
 		final String username = request.param("name");
-
+		final Settings configurationSettings = loadAsSettings(getConfigName());
+		
+		// no specific resource requested, return complete config
 		if (username == null || username.length() == 0) {
-			return badRequestResponse("No name given");
+			return new Tuple<String[], RestResponse>(new String[0],
+					new BytesRestResponse(RestStatus.OK, convertToJson(configurationSettings)));
 		}
 
 		// if password is set, it takes precedence over hash
@@ -74,8 +90,6 @@ public class UserApiAction extends AbstractApiAction {
 			additionalSettingsBuilder.remove("password");
 			additionalSettingsBuilder.put("hash", hash(plainTextPassword.toCharArray()));
 		}
-
-		
 				
 		// first, remove any existing user
 		final Settings.Builder internaluser = load(ConfigConstants.CONFIGNAME_INTERNAL_USERS);

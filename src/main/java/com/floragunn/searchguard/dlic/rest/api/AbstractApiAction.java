@@ -191,13 +191,17 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			throws Throwable {
 
 		final String resourcename = request.param("name");
-
+		
+		final Settings configurationSettings = loadAsSettings(getConfigName());
+				
+		// no specific resource requested, return complete config
 		if (resourcename == null || resourcename.length() == 0) {
-			return badRequestResponse("No " + getResourceName() + " specified.");
+			return new Tuple<String[], RestResponse>(new String[0],
+					new BytesRestResponse(RestStatus.OK, convertToJson(configurationSettings)));
 		}
 
-		final Settings.Builder configuration = load(getConfigName());
-
+		final Settings.Builder configuration = Settings.builder().put(configurationSettings);
+		
 		final Settings.Builder requestedConfiguration = copyKeysStartingWith(configuration.internalMap(),
 				resourcename + ".");
 
@@ -219,67 +223,71 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 	protected boolean ensureIndexExists(final Client client) {
 		if (!cs.state().metaData().hasConcreteIndex(this.searchguardIndex)) {
-			log.warn("Search Guard index does not exist yet, try to creat it.");
-
-			final Semaphore sem = new Semaphore(0);
-			final List<Exception> exceptions = new LinkedList<>();
-
-			client.index(new IndexRequest(searchguardIndex)
-					.type("sg")
-					.id("tattr")
-					.setRefreshPolicy(RefreshPolicy.IMMEDIATE)
-					.source("{\"val\": " + System.currentTimeMillis() + "}", XContentType.JSON), new ActionListener<IndexResponse>() {
-
-						@Override
-						public void onResponse(final IndexResponse response) {
-							sem.release();
-							if (logger.isDebugEnabled()) {
-								logger.debug("Search Guard index successfully created.");
-							}
-						}
-
-						@Override
-						public void onFailure(final Exception e) {
-							sem.release();
-							exceptions.add(e);
-							logger.error("Cannot create Search Guard index due to {}", e, e);
-						}
-					});
-
-			try {
-				if (!sem.tryAcquire(1, TimeUnit.MINUTES)) {
-					// timeout
-					logger.error("Cannot create Search Guard index due to a timeout.");
-					return false;
-				}
-
-				if (exceptions.size() > 0) {
-					return false;
-				}
-			} catch (InterruptedException e) {
-				Thread.currentThread().interrupt();
-				return false;
-			}
+			log.error("Search Guard index does not exist yet, try to creat it.");
+			return false;
 		}
-		
-		client.index(new IndexRequest(searchguardIndex)
-				.type("sg")
-				.id(ConfigConstants.CONFIGNAME_ROLES)
-				.setRefreshPolicy(RefreshPolicy.IMMEDIATE)
-				.source("{}", XContentType.JSON), new ActionListener<IndexResponse>() {
-
-					@Override
-					public void onResponse(final IndexResponse response) {
-						logger.info(response.status());
-					}
-
-					@Override
-					public void onFailure(final Exception e) {
-						logger.error(e);
-					}
-				});
-
-		return cs.state().metaData().hasConcreteIndex(this.searchguardIndex);
+		return true;
+		// TODO: Implement this.
+//
+//			final Semaphore sem = new Semaphore(0);
+//			final List<Exception> exceptions = new LinkedList<>();
+//
+//			client.index(new IndexRequest(searchguardIndex)
+//					.type("sg")
+//					.id("tattr")
+//					.setRefreshPolicy(RefreshPolicy.IMMEDIATE)
+//					.source("{\"val\": " + System.currentTimeMillis() + "}", XContentType.JSON), new ActionListener<IndexResponse>() {
+//
+//						@Override
+//						public void onResponse(final IndexResponse response) {
+//							sem.release();
+//							if (logger.isDebugEnabled()) {
+//								logger.debug("Search Guard index successfully created.");
+//							}
+//						}
+//
+//						@Override
+//						public void onFailure(final Exception e) {
+//							sem.release();
+//							exceptions.add(e);
+//							logger.error("Cannot create Search Guard index due to {}", e, e);
+//						}
+//					});
+//
+//			try {
+//				if (!sem.tryAcquire(1, TimeUnit.MINUTES)) {
+//					// timeout
+//					logger.error("Cannot create Search Guard index due to a timeout.");
+//					return false;
+//				}
+//
+//				if (exceptions.size() > 0) {
+//					return false;
+//				}
+//			} catch (InterruptedException e) {
+//				Thread.currentThread().interrupt();
+//				return false;
+//			}
+//		}
+//		
+//		client.index(new IndexRequest(searchguardIndex)
+//				.type("sg")
+//				.id(ConfigConstants.CONFIGNAME_ROLES)
+//				.setRefreshPolicy(RefreshPolicy.IMMEDIATE)
+//				.source("{}", XContentType.JSON), new ActionListener<IndexResponse>() {
+//
+//					@Override
+//					public void onResponse(final IndexResponse response) {
+//						logger.info(response.status());
+//					}
+//
+//					@Override
+//					public void onFailure(final Exception e) {
+//						logger.error(e);
+//					}
+//				});
+//
+//		return cs.state().metaData().hasConcreteIndex(this.searchguardIndex);
 	}
 
 	protected void save(final Client client, final RestRequest request, final String config,

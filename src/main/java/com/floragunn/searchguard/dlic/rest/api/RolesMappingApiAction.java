@@ -40,10 +40,20 @@ public class RolesMappingApiAction extends AbstractApiAction {
 			final AdminDNs adminDNs, final IndexBaseConfigurationRepository cl, final ClusterService cs,
             final PrincipalExtractor principalExtractor, final PrivilegesEvaluator evaluator, ThreadPool threadPool) {
 		super(settings, configPath, controller, client, adminDNs, cl, cs, principalExtractor, evaluator, threadPool);
+		
+		// legacy mapping for backwards compatibility
+		// TODO: remove in SG7
 		controller.registerHandler(Method.GET, "/_searchguard/api/rolesmapping/", this);
 		controller.registerHandler(Method.GET, "/_searchguard/api/rolesmapping/{name}", this);
 		controller.registerHandler(Method.DELETE, "/_searchguard/api/rolesmapping/{name}", this);
 		controller.registerHandler(Method.PUT, "/_searchguard/api/rolesmapping/{name}", this);
+
+		// corrected mapping, introduced in SG6
+		controller.registerHandler(Method.GET, "/_searchguard/api/rolemappings/", this);
+		controller.registerHandler(Method.GET, "/_searchguard/api/rolemappings/{name}", this);
+		controller.registerHandler(Method.DELETE, "/_searchguard/api/rolemappings/{name}", this);
+		controller.registerHandler(Method.PUT, "/_searchguard/api/rolemappings/{name}", this);
+
 	}
 
 	@Override

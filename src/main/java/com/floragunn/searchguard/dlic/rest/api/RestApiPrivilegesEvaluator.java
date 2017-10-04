@@ -1,3 +1,17 @@
+/*
+ * Copyright 2017 by floragunn GmbH - All rights reserved
+ * 
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed here is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * 
+ * This software is free of charge for non-commercial and academic use. 
+ * For commercial use in a production environment you have to obtain a license 
+ * from https://floragunn.com
+ * 
+ */
+
 package com.floragunn.searchguard.dlic.rest.api;
 
 import java.io.IOException;
@@ -62,6 +76,10 @@ public class RestApiPrivilegesEvaluator {
 		List<String> globallyDisabledEndpoints = new LinkedList<>();
 		globallyDisabledEndpoints
 				.addAll(Arrays.asList(settings.getAsArray(ConfigConstants.SEARCHGUARD_RESTAPI_ENDPOINTS_DISABLED + ".global")));
+		
+		if(logger.isDebugEnabled()) {
+			logger.debug("Globally disabled endpoints: {}", globallyDisabledEndpoints);
+		}
 
 		// disabled endpoints per role
 		for (String role : allowedRoles) {
@@ -106,40 +124,74 @@ public class RestApiPrivilegesEvaluator {
 
 		return constructAccessErrorMessage(roleBasedAccessFailureReason, certBasedAccessFailureReason);
 	}
+	
+	public Boolean currentUserHasRestApiAccess(Set<String> userRoles) {
+				
+		// check if user has any role that grants access
+		return !Collections.disjoint(allowedRoles, userRoles);
+		
+	}
+	
+	public Set<String> getDisabledEndpointsForCurrentUser(Set<String> userRoles) {
+		Set<String> disabledEndpointsForUser = new HashSet<>();
+		// iterate over all roles and disabled end points. Globally disabled end points are
+		// part of each role based disabled end points.
 
+		// Collect all disabled end points first - streams seem overhead here since collections are small
+		for (String userRole : userRoles) {
+			if (disabledEndpointsForRoles.containsKey(userRole)) {
+				disabledEndpointsForUser.addAll(disabledEndpointsForRoles.get(userRole));
+				if(logger.isTraceEnabled()) {
+					logger.trace("Disabled endpoints for user's role {} : {}", userRole, disabledEndpointsForRoles.get(userRole));
+				}
+
+			}
+		}
+		// Make sure to retain only end points configured for all roles
+		for (String userRole : userRoles) {
+			if (disabledEndpointsForRoles.containsKey(userRole)) {
+				disabledEndpointsForUser.retainAll(disabledEndpointsForRoles.get(userRole));
+			}
+		}	
+		if(logger.isTraceEnabled()) {
+			logger.trace("Disabled endpoints after retaining all : {}", disabledEndpointsForUser);
+		}
+
+		return disabledEndpointsForUser;
+	}
+	
 	private String checkRoleBasedAccessPermissions(Endpoint endpoint) {
 		// Role based access. Check that user has role suitable for admin access
 		// and that the role has also access to this endpoint.
 		if (this.roleBasedAccessEnabled) {
+
+			// get current user and roles
 			final User user = (User) threadPool.getThreadContext().getTransient(ConfigConstants.SG_USER);
 			final TransportAddress remoteAddress = (TransportAddress) threadPool.getThreadContext()
 					.getTransient(ConfigConstants.SG_REMOTE_ADDRESS);
+			
 			// map the users SG roles
 			Set<String> userRoles = privilegesEvaluator.mapSgRoles(user, remoteAddress);
 
 			// check if user has any role that grants access
-			if (!Collections.disjoint(allowedRoles, userRoles)) {
+			if (currentUserHasRestApiAccess(userRoles)) {
 				// yes, calculate disabled end points. Since a user can have multiple roles, the endpoint
 				// needs to be disabled in all roles.
-				Set<String> disabledEndpointForUser = new HashSet<>();
-				// iterate over all roles and disabled end points. Globally disabled end points are
-				// part of each role based disabled end points.
-
-				// Collect all disabled end points first - streams seem overhead here since collections are small
-				for (String userRole : userRoles) {
-					if (disabledEndpointsForRoles.containsKey(userRole)) {
-						disabledEndpointForUser.addAll(disabledEndpointsForRoles.get(userRole));
-					}
+				Set<String> disabledEndpointsForUser = getDisabledEndpointsForCurrentUser(userRoles);
+				
+				if(logger.isDebugEnabled()) {
+					logger.debug("Disabled endpoints for user {} : {} ", user, disabledEndpointsForUser);
 				}
-				// Make sure to retain only end points configured for all roles
-				for (String userRole : userRoles) {
-					if (disabledEndpointsForRoles.containsKey(userRole)) {
-						disabledEndpointForUser.retainAll(disabledEndpointsForRoles.get(userRole));
-					}
-				}
+			
 				// check if this endpoint is disabled igoring case
-				boolean isDisabled = disabledEndpointForUser.stream().filter(s -> s.equalsIgnoreCase(endpoint.name())).findFirst()
+				boolean isDisabled = disabledEndpointsForUser.stream().filter(s -> s.equalsIgnoreCase(endpoint.name())).findFirst()
 						.isPresent();
+
+				if(logger.isDebugEnabled()) {
+					logger.debug("Endpoint {} disabled for user? {} : {} ", endpoint.name(), user, isDisabled);
+				}
+
+				
 				if (isDisabled) {
 					logger.info(
 							"User {} with Search Guard Roles {} does not have access to endpoint {}, checking admin TLS certificate now.",

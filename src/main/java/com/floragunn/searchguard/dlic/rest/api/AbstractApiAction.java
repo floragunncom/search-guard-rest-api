@@ -40,6 +40,7 @@ import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.Settings.Builder;
+import org.elasticsearch.common.util.concurrent.ThreadContext.StoredContext;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -286,40 +287,46 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		String type = "sg";
 		String id = config;
 
-		if (cs.state().metaData().index(this.searchguardIndex).mapping("config") != null) {
-			type = config;
-			id = "0";
-		}
-
-		client.index(ir.type(type).id(id).setRefreshPolicy(RefreshPolicy.IMMEDIATE)
-				.source(config, toSource(settings)), new ActionListener<IndexResponse>() {
-
-					@Override
-					public void onResponse(final IndexResponse response) {
-						sem.release();
-						if (logger.isDebugEnabled()) {
-							logger.debug("{} successfully updated", config);
-						}
-					}
-
-					@Override
-					public void onFailure(final Exception e) {
-						sem.release();
-						exception.add(e);
-						logger.error("Cannot update {} due to {}", e, config, e);
-					}
-				});
-
-		if (!sem.tryAcquire(2, TimeUnit.MINUTES)) {
-			// timeout
-			logger.error("Cannot update {} due to timeout}", config);
-			throw new ElasticsearchException("Timeout updating " + config);
-		}
-
-		if (exception.size() > 0) {
-			throw exception.get(0);
-		}
+        try(StoredContext ctx = threadPool.getThreadContext().stashContext()) {
+            threadPool.getThreadContext().putHeader(ConfigConstants.SG_CONF_REQUEST_HEADER, "true");
         
+    		if (cs.state().metaData().index(this.searchguardIndex).mapping("config") != null) {
+    			type = config;
+    			id = "0";
+    		}
+
+    		client.index(ir.type(type).id(id).setRefreshPolicy(RefreshPolicy.IMMEDIATE)
+    				.source(config, toSource(settings)), new ActionListener<IndexResponse>() {
+
+    					@Override
+    					public void onResponse(final IndexResponse response) {
+    						sem.release();
+    						if (logger.isDebugEnabled()) {
+    							logger.debug("{} successfully updated", config);
+    						}
+    					}
+
+    					@Override
+    					public void onFailure(final Exception e) {
+    						sem.release();
+    						exception.add(e);
+    						logger.error("Cannot update {} due to {}", e, config, e);
+    					}
+    				});
+
+    		if (!sem.tryAcquire(2, TimeUnit.MINUTES)) {
+    			// timeout
+    			logger.error("Cannot update {} due to timeout}", config);
+    			throw new ElasticsearchException("Timeout updating " + config);
+    		}
+
+    		if (exception.size() > 0) {
+    			throw exception.get(0);
+    		}        
+        
+        } catch(Exception e) {
+        	throw new ElasticsearchException(e); 
+        }              
 	}
 
 	@Override

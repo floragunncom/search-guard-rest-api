@@ -46,6 +46,7 @@ public abstract class AbstractRestApiUnitTest extends SingleClusterTest {
 		
 		setup(Settings.EMPTY, new DynamicSgConfig(), builder.build(), init);
 		rh = restHelper();
+		rh.keystore = "kirk-keystore.jks";
 	}
 
 	protected final void setupWithRestRoles() throws Exception {
@@ -63,11 +64,13 @@ public abstract class AbstractRestApiUnitTest extends SingleClusterTest {
 		builder.put("searchguard.restapi.endpoints_disabled.global.0", "CACHE");
 
 		builder.put("searchguard.restapi.endpoints_disabled.sg_role_klingons.0", "LICENSE");
-		builder.put("searchguard.restapi.endpoints_disabled.sg_role_klingons.1", "ConfiGuration");
+		builder.put("searchguard.restapi.endpoints_disabled.sg_role_klingons.1", "cONFIgURATION");
 		builder.put("searchguard.restapi.endpoints_disabled.sg_role_klingons.2", "WRONGType");
+		builder.put("searchguard.restapi.endpoints_disabled.sg_role_klingons.3", "rolesmapping");
 		
 		setup(Settings.EMPTY, new DynamicSgConfig(), builder.build(), init);
 		rh = restHelper();
+		rh.keystore = "kirk-keystore.jks";
 	}
 
 	protected void deleteUser(String username) throws Exception {

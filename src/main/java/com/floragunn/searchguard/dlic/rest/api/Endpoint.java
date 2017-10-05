@@ -16,7 +16,7 @@ package com.floragunn.searchguard.dlic.rest.api;
 public enum Endpoint {
 	ACTIONGROUPS,
 	CACHE,
-	GETCONFIGURATION,
+	CONFIGURATION,
 	SGCONFIG,
 	LICENSE,
 	ROLES,

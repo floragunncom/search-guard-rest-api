@@ -73,24 +73,27 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	protected final Logger log = LogManager.getLogger(this.getClass());
 
 	protected final IndexBaseConfigurationRepository cl;
-	protected final ClusterService cs;		
+	protected final ClusterService cs;
 	final ThreadPool threadPool;
 	private String searchguardIndex;
 	private final RestApiPrivilegesEvaluator restApiPrivilegesEvaluator;
-	
+
 	static {
 		printLicenseInfo();
 	}
 
-	protected AbstractApiAction(final Settings settings, final Path configPath, final RestController controller, final Client client,
-			final AdminDNs adminDNs, final IndexBaseConfigurationRepository cl, final ClusterService cs,
-			final PrincipalExtractor principalExtractor, final PrivilegesEvaluator evaluator, ThreadPool threadPool) {
+	protected AbstractApiAction(final Settings settings, final Path configPath, final RestController controller,
+			final Client client, final AdminDNs adminDNs, final IndexBaseConfigurationRepository cl,
+			final ClusterService cs, final PrincipalExtractor principalExtractor, final PrivilegesEvaluator evaluator,
+			ThreadPool threadPool) {
 		super(settings);
-		this.searchguardIndex = settings.get(ConfigConstants.SEARCHGUARD_CONFIG_INDEX_NAME, ConfigConstants.SG_DEFAULT_CONFIG_INDEX);		
+		this.searchguardIndex = settings.get(ConfigConstants.SEARCHGUARD_CONFIG_INDEX_NAME,
+				ConfigConstants.SG_DEFAULT_CONFIG_INDEX);
 		this.cl = cl;
 		this.cs = cs;
 		this.threadPool = threadPool;
-		this.restApiPrivilegesEvaluator = new RestApiPrivilegesEvaluator(settings, adminDNs, evaluator, principalExtractor, configPath, threadPool);
+		this.restApiPrivilegesEvaluator = new RestApiPrivilegesEvaluator(settings, adminDNs, evaluator,
+				principalExtractor, configPath, threadPool);
 	}
 
 	protected abstract AbstractConfigurationValidator getValidator(final Method method, BytesReference ref);
@@ -179,9 +182,9 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			throws Throwable {
 
 		final String resourcename = request.param("name");
-		
+
 		final Settings configurationSettings = loadAsSettings(getConfigName());
-				
+
 		// no specific resource requested, return complete config
 		if (resourcename == null || resourcename.length() == 0) {
 			return new Tuple<String[], RestResponse>(new String[0],
@@ -189,7 +192,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		}
 
 		final Settings.Builder configuration = Settings.builder().put(configurationSettings);
-		
+
 		final Settings.Builder requestedConfiguration = copyKeysStartingWith(configuration.internalMap(),
 				resourcename + ".");
 
@@ -216,66 +219,68 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		}
 		return true;
 		// TODO: Implement this.
-//
-//			final Semaphore sem = new Semaphore(0);
-//			final List<Exception> exceptions = new LinkedList<>();
-//
-//			client.index(new IndexRequest(searchguardIndex)
-//					.type("sg")
-//					.id("tattr")
-//					.setRefreshPolicy(RefreshPolicy.IMMEDIATE)
-//					.source("{\"val\": " + System.currentTimeMillis() + "}", XContentType.JSON), new ActionListener<IndexResponse>() {
-//
-//						@Override
-//						public void onResponse(final IndexResponse response) {
-//							sem.release();
-//							if (logger.isDebugEnabled()) {
-//								logger.debug("Search Guard index successfully created.");
-//							}
-//						}
-//
-//						@Override
-//						public void onFailure(final Exception e) {
-//							sem.release();
-//							exceptions.add(e);
-//							logger.error("Cannot create Search Guard index due to {}", e, e);
-//						}
-//					});
-//
-//			try {
-//				if (!sem.tryAcquire(1, TimeUnit.MINUTES)) {
-//					// timeout
-//					logger.error("Cannot create Search Guard index due to a timeout.");
-//					return false;
-//				}
-//
-//				if (exceptions.size() > 0) {
-//					return false;
-//				}
-//			} catch (InterruptedException e) {
-//				Thread.currentThread().interrupt();
-//				return false;
-//			}
-//		}
-//		
-//		client.index(new IndexRequest(searchguardIndex)
-//				.type("sg")
-//				.id(ConfigConstants.CONFIGNAME_ROLES)
-//				.setRefreshPolicy(RefreshPolicy.IMMEDIATE)
-//				.source("{}", XContentType.JSON), new ActionListener<IndexResponse>() {
-//
-//					@Override
-//					public void onResponse(final IndexResponse response) {
-//						logger.info(response.status());
-//					}
-//
-//					@Override
-//					public void onFailure(final Exception e) {
-//						logger.error(e);
-//					}
-//				});
-//
-//		return cs.state().metaData().hasConcreteIndex(this.searchguardIndex);
+		//
+		// final Semaphore sem = new Semaphore(0);
+		// final List<Exception> exceptions = new LinkedList<>();
+		//
+		// client.index(new IndexRequest(searchguardIndex)
+		// .type("sg")
+		// .id("tattr")
+		// .setRefreshPolicy(RefreshPolicy.IMMEDIATE)
+		// .source("{\"val\": " + System.currentTimeMillis() + "}",
+		// XContentType.JSON), new ActionListener<IndexResponse>() {
+		//
+		// @Override
+		// public void onResponse(final IndexResponse response) {
+		// sem.release();
+		// if (logger.isDebugEnabled()) {
+		// logger.debug("Search Guard index successfully created.");
+		// }
+		// }
+		//
+		// @Override
+		// public void onFailure(final Exception e) {
+		// sem.release();
+		// exceptions.add(e);
+		// logger.error("Cannot create Search Guard index due to {}", e, e);
+		// }
+		// });
+		//
+		// try {
+		// if (!sem.tryAcquire(1, TimeUnit.MINUTES)) {
+		// // timeout
+		// logger.error("Cannot create Search Guard index due to a timeout.");
+		// return false;
+		// }
+		//
+		// if (exceptions.size() > 0) {
+		// return false;
+		// }
+		// } catch (InterruptedException e) {
+		// Thread.currentThread().interrupt();
+		// return false;
+		// }
+		// }
+		//
+		// client.index(new IndexRequest(searchguardIndex)
+		// .type("sg")
+		// .id(ConfigConstants.CONFIGNAME_ROLES)
+		// .setRefreshPolicy(RefreshPolicy.IMMEDIATE)
+		// .source("{}", XContentType.JSON), new ActionListener<IndexResponse>()
+		// {
+		//
+		// @Override
+		// public void onResponse(final IndexResponse response) {
+		// logger.info(response.status());
+		// }
+		//
+		// @Override
+		// public void onFailure(final Exception e) {
+		// logger.error(e);
+		// }
+		// });
+		//
+		// return cs.state().metaData().hasConcreteIndex(this.searchguardIndex);
 	}
 
 	protected void save(final Client client, final RestRequest request, final String config,
@@ -287,59 +292,54 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		String type = "sg";
 		String id = config;
 
-        try(StoredContext ctx = threadPool.getThreadContext().stashContext()) {
-            threadPool.getThreadContext().putHeader(ConfigConstants.SG_CONF_REQUEST_HEADER, "true");
-        
-    		if (cs.state().metaData().index(this.searchguardIndex).mapping("config") != null) {
-    			type = config;
-    			id = "0";
-    		}
+		if (cs.state().metaData().index(this.searchguardIndex).mapping("config") != null) {
+			type = config;
+			id = "0";
+		}
 
-    		client.index(ir.type(type).id(id).setRefreshPolicy(RefreshPolicy.IMMEDIATE)
-    				.source(config, toSource(settings)), new ActionListener<IndexResponse>() {
+		client.index(ir.type(type).id(id).setRefreshPolicy(RefreshPolicy.IMMEDIATE).source(config, toSource(settings)),
+				new ActionListener<IndexResponse>() {
 
-    					@Override
-    					public void onResponse(final IndexResponse response) {
-    						sem.release();
-    						if (logger.isDebugEnabled()) {
-    							logger.debug("{} successfully updated", config);
-    						}
-    					}
+					@Override
+					public void onResponse(final IndexResponse response) {
+						sem.release();
+						if (logger.isDebugEnabled()) {
+							logger.debug("{} successfully updated", config);
+						}
+					}
 
-    					@Override
-    					public void onFailure(final Exception e) {
-    						sem.release();
-    						exception.add(e);
-    						logger.error("Cannot update {} due to {}", e, config, e);
-    					}
-    				});
+					@Override
+					public void onFailure(final Exception e) {
+						sem.release();
+						exception.add(e);
+						logger.error("Cannot update {} due to {}", e, config, e);
+					}
+				});
 
-    		if (!sem.tryAcquire(2, TimeUnit.MINUTES)) {
-    			// timeout
-    			logger.error("Cannot update {} due to timeout}", config);
-    			throw new ElasticsearchException("Timeout updating " + config);
-    		}
+		if (!sem.tryAcquire(2, TimeUnit.MINUTES)) {
+			// timeout
+			logger.error("Cannot update {} due to timeout}", config);
+			throw new ElasticsearchException("Timeout updating " + config);
+		}
 
-    		if (exception.size() > 0) {
-    			throw exception.get(0);
-    		}        
-        
-        } catch(Exception e) {
-        	throw new ElasticsearchException(e); 
-        }              
+		if (exception.size() > 0) {
+			throw exception.get(0);
+		}
+
 	}
 
 	@Override
 	protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
 
-		// consume all parameters first so we can return a correct HTTP status, not 400
+		// consume all parameters first so we can return a correct HTTP status,
+		// not 400
 		consumeParameters(request);
 
 		// TODO: - Initialize if non-existant
 		// check if SG index has been initialized
 		if (!ensureIndexExists(client)) {
-			return channel -> channel
-					.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, ErrorType.SG_NOT_INITIALIZED.getMessage()));
+			return channel -> channel.sendResponse(
+					new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, ErrorType.SG_NOT_INITIALIZED.getMessage()));
 		}
 
 		// check if request is authorized
@@ -347,7 +347,8 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 		if (authError != null) {
 			logger.error("No permission to access REST API: " + authError);
-			// auditLog.logSgIndexAttempt(request, action); //TODO add method for rest request
+			// auditLog.logSgIndexAttempt(request, action); //TODO add method
+			// for rest request
 			request.params().clear();
 			final BytesRestResponse response = new BytesRestResponse(RestStatus.FORBIDDEN, authError);
 			return channel -> channel.sendResponse(response);
@@ -356,14 +357,20 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		final Semaphore sem = new Semaphore(0);
 		final List<Throwable> exception = new ArrayList<Throwable>(1);
 		final Tuple<String[], RestResponse> response;
-		try {
+
+		try (StoredContext ctx = threadPool.getThreadContext().stashContext()) {
+
+			threadPool.getThreadContext().putHeader(ConfigConstants.SG_CONF_REQUEST_HEADER, "true");
+
 			response = handleApiRequest(request, client);
 
+			// reload config
 			if (response.v1().length > 0) {
 
 				final ConfigUpdateRequest cur = new ConfigUpdateRequest(response.v1());
 				// cur.putInContext(ConfigConstants.SG_USER,
-				// new User((String) request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL)));
+				// new User((String)
+				// request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL)));
 
 				client.execute(ConfigUpdateAction.INSTANCE, cur, new ActionListener<ConfigUpdateResponse>() {
 
@@ -394,7 +401,8 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		} catch (final Throwable e) {
 			logger.error("Unexpected exception {}", e, e);
 			request.params().clear();
-			return channel -> channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, e.toString()));
+			return channel -> channel
+					.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, e.toString()));
 		}
 
 		try {
@@ -409,7 +417,8 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 		if (exception.size() > 0) {
 			request.params().clear();
-			return channel -> channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, exception.get(0).toString()));
+			return channel -> channel
+					.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, exception.get(0).toString()));
 		}
 
 		return channel -> channel.sendResponse(response.v2());
@@ -516,8 +525,8 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	}
 
 	protected static String convertToYaml(BytesReference bytes, boolean prettyPrint) throws IOException {
-		try (XContentParser parser = JsonXContent.jsonXContent
-				.createParser(NamedXContentRegistry.EMPTY, bytes.streamInput())) {
+		try (XContentParser parser = JsonXContent.jsonXContent.createParser(NamedXContentRegistry.EMPTY,
+				bytes.streamInput())) {
 			parser.nextToken();
 			XContentBuilder builder = XContentFactory.yamlBuilder();
 			if (prettyPrint) {
@@ -584,9 +593,11 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	}
 
 	/**
-	 * Consume all defined parameters for the request. Before we handle the request in subclasses where we actually need the parameter, some
-	 * global checks are performed, e.g. check whether the SG index exists. Thus, the parameter(s) have not been consumed, and ES will
-	 * always return a 400 with an internal error message.
+	 * Consume all defined parameters for the request. Before we handle the
+	 * request in subclasses where we actually need the parameter, some global
+	 * checks are performed, e.g. check whether the SG index exists. Thus, the
+	 * parameter(s) have not been consumed, and ES will always return a 400 with
+	 * an internal error message.
 	 * 
 	 * @param request
 	 */

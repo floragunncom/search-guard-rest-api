@@ -56,7 +56,7 @@ public class GetConfigurationApiAction extends AbstractApiAction {
 
 	@Override
 	protected Endpoint getEndpoint() {
-		return Endpoint.GETCONFIGURATION;
+		return Endpoint.CONFIGURATION;
 	}
 
 	@Override

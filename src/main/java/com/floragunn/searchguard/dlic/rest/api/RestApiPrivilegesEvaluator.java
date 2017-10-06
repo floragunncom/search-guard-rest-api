@@ -89,7 +89,11 @@ public class RestApiPrivilegesEvaluator {
 
 		// globally disabled endpoints, disables access to Endpoint/Method
 		// combination for all roles
-		globallyDisabledEndpoints = parseDisabledEndpoints(settings.getAsSettings(ConfigConstants.SEARCHGUARD_RESTAPI_ENDPOINTS_DISABLED + ".global"));
+		Settings globalSettings = settings.getAsSettings(ConfigConstants.SEARCHGUARD_RESTAPI_ENDPOINTS_DISABLED + ".global");
+		if (!globalSettings.isEmpty()) {
+			globallyDisabledEndpoints = parseDisabledEndpoints(globalSettings);	
+		}
+		
 
 		if (logger.isDebugEnabled()) {
 			logger.debug("Globally disabled endpoints: {}", globallyDisabledEndpoints);

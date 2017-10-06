@@ -50,13 +50,13 @@ public class ActionGroupsApiTest extends AbstractRestApiUnitTest {
 		response = rh.executeGetRequest("/_searchguard/api/actiongroup/nothinghthere", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatusCode());
 
-		// GET, malformed URL
+		// GET, new endpoint which replaces configuration endpoint
 		response = rh.executeGetRequest("/_searchguard/api/actiongroup/", new Header[0]);
-		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 
-		// GET, malformed URL
+		// GET, new endpoint which replaces configuration endpoint
 		response = rh.executeGetRequest("/_searchguard/api/actiongroup", new Header[0]);
-		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 
 		// create index
 		setupStarfleetIndex();

@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.elasticsearch.client.Client;
@@ -98,7 +99,11 @@ public class PermissionsInfoAction extends BaseRestHandler {
                     builder.field("user", user);
                     builder.field("user_name", user==null?null:user.getName());
                     builder.field("has_api_access", hasApiAccess);
-                    builder.field("disabled_endpoints", disabledEndpoints);
+                    builder.startObject("disabled_endpoints");
+                    for(Entry<Endpoint, List<Method>>  entry : disabledEndpoints.entrySet()) {
+                    	builder.field(entry.getKey().name(), entry.getValue());
+                    }
+                    builder.endObject();
                     builder.endObject();
                     response = new BytesRestResponse(RestStatus.OK, builder);
                 } catch (final Exception e1) {

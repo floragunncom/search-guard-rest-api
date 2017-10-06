@@ -58,13 +58,13 @@ public class RolesMappingApiTest extends AbstractRestApiUnitTest {
 		response = rh.executeGetRequest("/_searchguard/api/rolesmapping/nothinghthere", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatusCode());
 
-		// GET, malformed URL
+		// GET, new URL endpoint in SG6
 		response = rh.executeGetRequest("/_searchguard/api/rolesmapping/", new Header[0]);
-		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 
-		// GET, malformed URL
+		// GET, new URL endpoint in SG6
 		response = rh.executeGetRequest("/_searchguard/api/rolesmapping", new Header[0]);
-		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 
 		// create index
 		setupStarfleetIndex();

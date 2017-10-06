@@ -61,13 +61,13 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		response = rh.executeGetRequest("/_searchguard/api/user/nothinghthere", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatusCode());
 
-		// GET, malformed URL
+		// GET, new URL endpoint in SG6
 		response = rh.executeGetRequest("/_searchguard/api/user/", new Header[0]);
-		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 
-		// GET, malformed URL
+		// GET, new URL endpoint in SG6
 		response = rh.executeGetRequest("/_searchguard/api/user", new Header[0]);
-		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 
 		// -- PUT
 

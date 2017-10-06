@@ -61,12 +61,15 @@ public abstract class AbstractRestApiUnitTest extends SingleClusterTest {
 		builder.put("searchguard.restapi.roles_enabled.0", "sg_role_klingons");
 		builder.put("searchguard.restapi.roles_enabled.1", "sg_role_vulcans");
 
-		builder.put("searchguard.restapi.endpoints_disabled.global.0", "CACHE");
+		builder.put("searchguard.restapi.endpoints_disabled.global.CACHE.0", "*");
 
-		builder.put("searchguard.restapi.endpoints_disabled.sg_role_klingons.0", "LICENSE");
-		builder.put("searchguard.restapi.endpoints_disabled.sg_role_klingons.1", "cONFIgURATION");
-		builder.put("searchguard.restapi.endpoints_disabled.sg_role_klingons.2", "WRONGType");
-		builder.put("searchguard.restapi.endpoints_disabled.sg_role_klingons.3", "rolesmapping");
+		builder.put("searchguard.restapi.endpoints_disabled.sg_role_klingons.LICENSE.0", "*");
+		builder.put("searchguard.restapi.endpoints_disabled.sg_role_klingons.conFiGuration.0", "*");
+		builder.put("searchguard.restapi.endpoints_disabled.sg_role_klingons.wRongType.0", "WRONGType");
+		builder.put("searchguard.restapi.endpoints_disabled.sg_role_klingons.ROLESMAPPING.0", "PUT");
+		builder.put("searchguard.restapi.endpoints_disabled.sg_role_klingons.ROLESMAPPING.1", "DELETE");
+		
+		builder.put("searchguard.restapi.endpoints_disabled.sg_role_vulcans.SGCONFIG.0", "*");
 		
 		setup(Settings.EMPTY, new DynamicSgConfig(), builder.build(), init);
 		rh = restHelper();

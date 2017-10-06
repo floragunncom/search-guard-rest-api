@@ -70,6 +70,15 @@ public class RoleBasedAccessTest extends AbstractRestApiUnitTest {
 		Assert.assertEquals(settings.getAsMap().get("sarek.hash"), "$2a$12$Ioo1uXmH.Nq/lS5dUVBEsePSmZ5pSIpVO/xKHaquU/Jvq97I7nAgG");
 		Assert.assertEquals(settings.getAsMap().get("worf.hash"), "$2a$12$A41IxPXV1/Dx46C6i1ufGubv.p3qYX7xVcY46q33sylYbIqQVwTMu");
 
+		// roles API, GET accessible for worf
+		response = rh.executeGetRequest("/_searchguard/api/rolesmapping", encodeBasicHeader("worf", "worf"));
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
+		Assert.assertEquals(settings.getAsMap().get("sg_all_access.users.0"), "nagilum");
+		Assert.assertEquals(settings.getAsMap().get("sg_role_starfleet_library.backendroles.0"), "starfleet*");
+		Assert.assertEquals(settings.getAsMap().get("sg_zdummy_all.users.0"), "bug108");
+		
+		
 		// Deprecated get configuration API, acessible for sarek
 		response = rh.executeGetRequest("_searchguard/api/configuration/internalusers", encodeBasicHeader("sarek", "sarek"));
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
@@ -161,11 +170,11 @@ public class RoleBasedAccessTest extends AbstractRestApiUnitTest {
 		Assert.assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatusCode());
 		Assert.assertTrue(response.getBody().contains("'sg_role_starfleet_captains' not found"));
 
-		// Worf, has no access to rolemappings API 
+		// Worf, has no DELETE access to rolemappings API 
 		response = rh.executeDeleteRequest("/_searchguard/api/rolemappings/sg_unittest_1", encodeBasicHeader("worf", "worf"));
 		Assert.assertEquals(HttpStatus.SC_FORBIDDEN, response.getStatusCode());
 
-		// Worf, has no access to rolemappings API, legacy endpoint 
+		// Worf, has no DELETE access to rolemappings API, legacy endpoint 
 		response = rh.executeDeleteRequest("/_searchguard/api/rolesmapping/sg_unittest_1", encodeBasicHeader("worf", "worf"));
 		Assert.assertEquals(HttpStatus.SC_FORBIDDEN, response.getStatusCode());
 

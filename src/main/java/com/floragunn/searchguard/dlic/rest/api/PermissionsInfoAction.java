@@ -16,6 +16,8 @@ package com.floragunn.searchguard.dlic.rest.api;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.elasticsearch.client.Client;
@@ -29,8 +31,8 @@ import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
-import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.rest.RestRequest.Method;
+import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.threadpool.ThreadPool;
 
 import com.floragunn.searchguard.configuration.AdminDNs;
@@ -90,13 +92,13 @@ public class PermissionsInfoAction extends BaseRestHandler {
             				.getTransient(ConfigConstants.SG_REMOTE_ADDRESS);
             		Set<String> userRoles = privilegesEvaluator.mapSgRoles(user, remoteAddress);
             		Boolean hasApiAccess = restApiPrivilegesEvaluator.currentUserHasRestApiAccess(userRoles);
-            		Set<String> disabledEndpoints = restApiPrivilegesEvaluator.getDisabledEndpointsForCurrentUser(userRoles);
+            		Map<Endpoint, List<Method>> disabledEndpoints = restApiPrivilegesEvaluator.getDisabledEndpointsForCurrentUser(user.getName(), userRoles);
 
                     builder.startObject();
                     builder.field("user", user);
                     builder.field("user_name", user==null?null:user.getName());
                     builder.field("has_api_access", hasApiAccess);
-                    builder.field("disabled_endpoints", disabledEndpoints.toArray(new String[0]));
+                    builder.field("disabled_endpoints", disabledEndpoints);
                     builder.endObject();
                     response = new BytesRestResponse(RestStatus.OK, builder);
                 } catch (final Exception e1) {

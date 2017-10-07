@@ -68,7 +68,10 @@ public class RestApiPrivilegesEvaluator {
 	
 	// globally disabled endpoints and methods, will always be forbidden
 	Map<Endpoint, List<Method>> globallyDisabledEndpoints = new HashMap<>();
-	
+
+	// all endpoints and methods, will be returned for users that do not have any access at all
+	Map<Endpoint, List<Method>> allEndpoints = new HashMap<>();
+
 	private final Boolean roleBasedAccessEnabled;
 
 	public RestApiPrivilegesEvaluator(Settings settings, AdminDNs adminDNs, PrivilegesEvaluator privilegesEvaluator, PrincipalExtractor principalExtractor, Path configPath,
@@ -82,6 +85,16 @@ public class RestApiPrivilegesEvaluator {
 		this.settings = settings;
 
 		// set up
+		
+		// all endpoints and methods
+		Map<Endpoint, List<Method>> allEndpoints = new HashMap<>();
+		for(Endpoint endpoint : Endpoint.values()) {
+			List<Method> allMethods = new LinkedList<>();
+			allMethods.addAll(Arrays.asList(Method.values()));
+			allEndpoints.put(endpoint, allMethods);
+		}
+		this.allEndpoints = Collections.unmodifiableMap(allEndpoints);
+
 		// setup role based permissions
 		allowedRoles.addAll(Arrays.asList(settings.getAsArray(ConfigConstants.SEARCHGUARD_RESTAPI_ROLES_ENABLED)));
 
@@ -225,6 +238,10 @@ public class RestApiPrivilegesEvaluator {
 		if (disabledEndpointsForUsers.containsKey(userPrincipal)) {
 			return disabledEndpointsForUsers.get(userPrincipal);
 		}
+		
+		if (!currentUserHasRestApiAccess(userRoles)) {
+			return this.allEndpoints;
+		}
 
 		// will contain the final list of disabled endpoints and methods
 		Map<Endpoint, List<Method>> finalEndpoints = new HashMap<>();
@@ -264,7 +281,6 @@ public class RestApiPrivilegesEvaluator {
 
 		}
 		
-
 		// one or more disabled remaining endpoints, keep only 
 		// methods contained in all roles for each endpoint
 		for (Endpoint endpoint : remainingEndpoints) {

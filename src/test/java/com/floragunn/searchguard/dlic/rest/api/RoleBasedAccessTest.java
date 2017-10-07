@@ -237,16 +237,20 @@ public class RoleBasedAccessTest extends AbstractRestApiUnitTest {
 		// PUT roles
 		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet_captains",
 				FileHelper.loadFile("roles_captains_different_content.json"), encodeBasicHeader("test", "test"));
-		Assert.assertEquals(HttpStatus.SC_CREATED, response.getStatusCode());
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+
+		// GET captions role
+		response = rh.executeGetRequest("/_searchguard/api/roles/sg_role_starfleet_captains", encodeBasicHeader("test", "test"));
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 
 		// Delete captions role
-		response = rh.executeDeleteRequest("/_searchguard/api/roles/sg_role_starfleet_captains", encodeBasicHeader("worf", "worf"));
+		response = rh.executeDeleteRequest("/_searchguard/api/roles/sg_role_starfleet_captains", encodeBasicHeader("test", "test"));
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		Assert.assertTrue(response.getBody().contains("role sg_role_starfleet_captains deleted"));
 
 		// GET captions role
 		response = rh.executeGetRequest("/_searchguard/api/roles/sg_role_starfleet_captains", encodeBasicHeader("test", "test"));
-		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		Assert.assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatusCode());
 		
 
 	}

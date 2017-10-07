@@ -79,3 +79,7 @@ sg_role_host2:
 sg_theindex_admin:
   users:
     - theindexadmin
+
+sg_test:
+  users:
+    - test

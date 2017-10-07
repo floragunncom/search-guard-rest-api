@@ -60,7 +60,8 @@ public abstract class AbstractRestApiUnitTest extends SingleClusterTest {
 
 		builder.put("searchguard.restapi.roles_enabled.0", "sg_role_klingons");
 		builder.put("searchguard.restapi.roles_enabled.1", "sg_role_vulcans");
-
+		builder.put("searchguard.restapi.roles_enabled.2", "sg_test");
+		
 		builder.put("searchguard.restapi.endpoints_disabled.global.CACHE.0", "*");
 
 		builder.put("searchguard.restapi.endpoints_disabled.sg_role_klingons.LICENSE.0", "*");

@@ -9,4 +9,6 @@ sarek:
 worf:
   hash: $2a$12$A41IxPXV1/Dx46C6i1ufGubv.p3qYX7xVcY46q33sylYbIqQVwTMu
   roles:
-    - klingon    
+    - klingon
+test:
+  hash: $2a$12$1HqHxm3QTfzwkse7vwzhFOV4gDv787cZ8BwmCwNEyJhn0CZoo8VVu        

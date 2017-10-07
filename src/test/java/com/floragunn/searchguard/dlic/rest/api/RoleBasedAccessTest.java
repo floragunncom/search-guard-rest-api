@@ -214,6 +214,40 @@ public class RoleBasedAccessTest extends AbstractRestApiUnitTest {
 		// cache
 		response = rh.executeDeleteRequest("_searchguard/api/cache", encodeBasicHeader("wrong", "wrong"));
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		
+		// -- test user, does not have any endpoints disabled, but has access to API, i.e. full access 
+		
+		rh.sendHTTPClientCertificate = false;
+		
+		// GET actiongroups
+		response = rh.executeGetRequest("_searchguard/api/configuration/actiongroups", encodeBasicHeader("test", "test"));
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+
+		response = rh.executeGetRequest("_searchguard/api/actiongroups", encodeBasicHeader("test", "test"));
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		
+		// license
+		response = rh.executeGetRequest("_searchguard/api/license", encodeBasicHeader("test", "test"));
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+
+		// clear cache - globally disabled, has to fail
+		response = rh.executeDeleteRequest("_searchguard/api/cache", encodeBasicHeader("test", "test"));
+		Assert.assertEquals(HttpStatus.SC_FORBIDDEN, response.getStatusCode());
+
+		// PUT roles
+		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet_captains",
+				FileHelper.loadFile("roles_captains_different_content.json"), encodeBasicHeader("test", "test"));
+		Assert.assertEquals(HttpStatus.SC_CREATED, response.getStatusCode());
+
+		// Delete captions role
+		response = rh.executeDeleteRequest("/_searchguard/api/roles/sg_role_starfleet_captains", encodeBasicHeader("worf", "worf"));
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		Assert.assertTrue(response.getBody().contains("role sg_role_starfleet_captains deleted"));
+
+		// GET captions role
+		response = rh.executeGetRequest("/_searchguard/api/roles/sg_role_starfleet_captains", encodeBasicHeader("test", "test"));
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		
 
 	}
 }

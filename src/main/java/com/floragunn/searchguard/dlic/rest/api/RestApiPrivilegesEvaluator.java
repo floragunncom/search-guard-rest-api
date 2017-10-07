@@ -87,14 +87,12 @@ public class RestApiPrivilegesEvaluator {
 
 		this.roleBasedAccessEnabled = !allowedRoles.isEmpty();
 
-		// globally disabled endpoints, disables access to Endpoint/Method
-		// combination for all roles
+		// globally disabled endpoints, disables access to Endpoint/Method combination for all roles
 		Settings globalSettings = settings.getAsSettings(ConfigConstants.SEARCHGUARD_RESTAPI_ENDPOINTS_DISABLED + ".global");
 		if (!globalSettings.isEmpty()) {
 			globallyDisabledEndpoints = parseDisabledEndpoints(globalSettings);	
 		}
 		
-
 		if (logger.isDebugEnabled()) {
 			logger.debug("Globally disabled endpoints: {}", globallyDisabledEndpoints);
 		}
@@ -222,20 +220,25 @@ public class RestApiPrivilegesEvaluator {
 	}
 
 	public Map<Endpoint, List<Method>> getDisabledEndpointsForCurrentUser(String userPrincipal, Set<String> userRoles) {
-
+		
+		// cache
 		if (disabledEndpointsForUsers.containsKey(userPrincipal)) {
 			return disabledEndpointsForUsers.get(userPrincipal);
 		}
 
+		// will contain the final list of disabled endpoints and methods
+		Map<Endpoint, List<Method>> finalEndpoints = new HashMap<>();
+		
 		// List of all disabled endpoints for user. Disabled endpoints must be configured in all
 		// roles to take effect. If a role contains a disabled endpoint, but another role
 		// allows this endpoint (i.e. not contained in the disabled endpoints for this role),
 		// the access is allowed.
-		
+				
 		// make list mutable
 		List<Endpoint> remainingEndpoints = new LinkedList<>(Arrays.asList(Endpoint.values()));
 
-		// only retain endpoints contained in all roles
+		// only retain endpoints contained in all roles for user
+		boolean hasDisabledEndpoints = false;
 		for (String userRole : userRoles) {
 			Map<Endpoint, List<Method>> endpointsForRole = disabledEndpointsForRoles.get(userRole);
 			if (endpointsForRole == null || endpointsForRole.isEmpty()) {
@@ -243,14 +246,27 @@ public class RestApiPrivilegesEvaluator {
 			}
 			Set<Endpoint> disabledEndpoints = endpointsForRole.keySet();
 			remainingEndpoints.retainAll(disabledEndpoints);
+			hasDisabledEndpoints = true;
 		}
 
 		if (logger.isDebugEnabled()) {
 			logger.debug("Remaining endpoints for user {} after retaining all : {}", userPrincipal, remainingEndpoints);
 		}
 
-		// for each remaining endpoint, keep only methods contained in all roles
-		Map<Endpoint, List<Method>> finalEndpoints = new HashMap<>();
+		// if user does not have any disabled endpoints, only globally disabled endpoints apply
+		if (!hasDisabledEndpoints) {
+
+			if (logger.isDebugEnabled()) {
+				logger.debug("No disabled endpoints for user {} at all,  only globally disabledendpoints apply.", userPrincipal, remainingEndpoints);
+			}
+			disabledEndpointsForUsers.put(userPrincipal, addGloballyDisabledEndpoints(finalEndpoints));
+			return finalEndpoints;
+
+		}
+		
+
+		// one or more disabled remaining endpoints, keep only 
+		// methods contained in all roles for each endpoint
 		for (Endpoint endpoint : remainingEndpoints) {
 			// make list mutable
 			List<Method> remainingMethodsForEndpoint = new LinkedList<>(Arrays.asList(Method.values()));
@@ -269,14 +285,7 @@ public class RestApiPrivilegesEvaluator {
 		}
 
 		// add globally disabled endpoints and methods, will always be disabled
-		if(globallyDisabledEndpoints != null && !globallyDisabledEndpoints.isEmpty()) {
-			Set<Endpoint> globalEndoints = globallyDisabledEndpoints.keySet();
-			for(Endpoint endpoint : globalEndoints) {
-				finalEndpoints.putIfAbsent(endpoint, new LinkedList<>());
-				finalEndpoints.get(endpoint).addAll(globallyDisabledEndpoints.get(endpoint));
-			}			
-		}
-
+		addGloballyDisabledEndpoints(finalEndpoints);		
 		disabledEndpointsForUsers.put(userPrincipal, finalEndpoints);
 		
 		if (logger.isDebugEnabled()) {
@@ -285,7 +294,18 @@ public class RestApiPrivilegesEvaluator {
 
 		return disabledEndpointsForUsers.get(userPrincipal);
 	}
-
+	
+	private Map<Endpoint, List<Method>> addGloballyDisabledEndpoints(Map<Endpoint, List<Method>> endpoints) {
+		if(globallyDisabledEndpoints != null && !globallyDisabledEndpoints.isEmpty()) {
+			Set<Endpoint> globalEndoints = globallyDisabledEndpoints.keySet();
+			for(Endpoint endpoint : globalEndoints) {
+				endpoints.putIfAbsent(endpoint, new LinkedList<>());
+				endpoints.get(endpoint).addAll(globallyDisabledEndpoints.get(endpoint));
+			}			
+		}
+		return endpoints;
+	}
+	
 	private String checkRoleBasedAccessPermissions(RestRequest request, Endpoint endpoint) {
 		// Role based access. Check that user has role suitable for admin access
 		// and that the role has also access to this endpoint.

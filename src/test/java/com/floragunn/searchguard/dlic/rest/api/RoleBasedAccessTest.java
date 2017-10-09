@@ -171,7 +171,7 @@ public class RoleBasedAccessTest extends AbstractRestApiUnitTest {
 		Assert.assertTrue(response.getBody().contains("'sg_role_starfleet_captains' not found"));
 
 		// Worf, has no DELETE access to rolemappings API 
-		response = rh.executeDeleteRequest("/_searchguard/api/rolemappings/sg_unittest_1", encodeBasicHeader("worf", "worf"));
+		response = rh.executeDeleteRequest("/_searchguard/api/rolesmapping/sg_unittest_1", encodeBasicHeader("worf", "worf"));
 		Assert.assertEquals(HttpStatus.SC_FORBIDDEN, response.getStatusCode());
 
 		// Worf, has no DELETE access to rolemappings API, legacy endpoint 

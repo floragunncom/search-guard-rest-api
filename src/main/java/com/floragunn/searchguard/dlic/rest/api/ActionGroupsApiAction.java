@@ -44,6 +44,7 @@ public class ActionGroupsApiAction extends AbstractApiAction {
 			final AdminDNs adminDNs, final IndexBaseConfigurationRepository cl, final ClusterService cs,
             final PrincipalExtractor principalExtractor, final PrivilegesEvaluator evaluator, ThreadPool threadPool) {
 		super(settings, configPath, controller, client, adminDNs, cl, cs, principalExtractor, evaluator, threadPool);
+
 		// legacy mapping for backwards compatibility
 		// TODO: remove in SG7
 		controller.registerHandler(Method.GET, "/_searchguard/api/actiongroup/{name}", this);

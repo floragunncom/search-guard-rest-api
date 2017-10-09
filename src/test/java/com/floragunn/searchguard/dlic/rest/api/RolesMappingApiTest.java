@@ -37,8 +37,12 @@ public class RolesMappingApiTest extends AbstractRestApiUnitTest {
 		rh.keystore = "kirk-keystore.jks";
 		rh.sendHTTPClientCertificate = true;
 
-		// check rolesmapping exists
+		// check rolesmapping exists, old config api
 		HttpResponse response = rh.executeGetRequest("_searchguard/api/configuration/rolesmapping");
+		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+
+		// check rolesmapping exists, new API
+		response = rh.executeGetRequest("_searchguard/api/rolesmapping");
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 
 		// -- GET

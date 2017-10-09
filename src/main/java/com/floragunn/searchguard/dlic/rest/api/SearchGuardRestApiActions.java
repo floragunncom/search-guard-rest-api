@@ -44,6 +44,7 @@ public class SearchGuardRestApiActions {
 	    handlers.add(new GetConfigurationApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor, evaluator, threadPool));
 	    handlers.add(new FlushCacheApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor, evaluator, threadPool));
 	    handlers.add(new LicenseApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor, evaluator, threadPool));
+	    handlers.add(new SgConfigAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor, evaluator, threadPool));
 	    handlers.add(new PermissionsInfoAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor, evaluator, threadPool));
 	    return Collections.unmodifiableCollection(handlers);
 	}

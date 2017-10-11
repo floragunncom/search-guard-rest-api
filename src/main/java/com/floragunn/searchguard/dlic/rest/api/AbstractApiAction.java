@@ -134,8 +134,16 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			return badRequestResponse("No " + getResourceName() + " specified");
 		}
 
-		final Settings.Builder existing = load(getConfigName());
-
+		final Settings existingAsSettings = loadAsSettings(getConfigName());
+		
+		// check if resource is read only
+		Boolean readOnly = existingAsSettings.getAsBoolean(name+ "." + ConfigConstants.CONFIGKEY_READONLY, Boolean.FALSE);
+		if (readOnly) {
+			return forbidden("Resource '"+ name +"' is read-only.");
+		}
+		
+		Settings.Builder existing = Settings.builder().put(existingAsSettings);
+		
 		Map<String, String> removedEntries = removeKeysStartingWith(existing.internalMap(), name + ".");
 		boolean modified = !removedEntries.isEmpty();
 
@@ -149,14 +157,23 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 	protected Tuple<String[], RestResponse> handlePut(final RestRequest request, final Client client,
 			final Settings.Builder additionalSettingsBuilder) throws Throwable {
+		
 		final String name = request.param("name");
 
 		if (name == null || name.length() == 0) {
 			return badRequestResponse("No " + getResourceName() + " specified");
 		}
 
-		final Settings.Builder existing = load(getConfigName());
-
+		final Settings existingAsSettings = loadAsSettings(getConfigName());
+		
+		// check if resource is writeable
+		Boolean readOnly = existingAsSettings.getAsBoolean(name+ "." + ConfigConstants.CONFIGKEY_READONLY, Boolean.FALSE);
+		if (readOnly) {
+			return forbidden("Resource '"+ name +"' is read-only.");
+		}
+		
+		Settings.Builder existing = Settings.builder().put(existingAsSettings);
+		
 		if (log.isTraceEnabled()) {
 			log.trace(additionalSettingsBuilder.build().getAsMap().toString());
 		}
@@ -577,6 +594,10 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 	protected Tuple<String[], RestResponse> notFound(String message) {
 		return response(RestStatus.NOT_FOUND, RestStatus.NOT_FOUND.name(), message);
+	}
+
+	protected Tuple<String[], RestResponse> forbidden(String message) {
+		return response(RestStatus.FORBIDDEN, RestStatus.FORBIDDEN.name(), message);
 	}
 
 	protected Tuple<String[], RestResponse> internalErrorResponse(String message) {

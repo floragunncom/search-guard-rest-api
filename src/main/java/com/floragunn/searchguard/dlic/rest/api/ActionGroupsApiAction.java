@@ -65,33 +65,6 @@ public class ActionGroupsApiAction extends AbstractApiAction {
 		return Endpoint.ACTIONGROUPS;
 	}
 
-	@Override // need to overwrite for we have no key to use
-	protected Tuple<String[], RestResponse> handlePut(final RestRequest request, final Client client,
-			final Settings.Builder additionalSettingsBuilder) throws Throwable {
-		final String name = request.param("name");
-
-		if (name == null || name.length() == 0) {
-			return badRequestResponse("No " + getResourceName() + " specified");
-		}
-
-		final Settings.Builder existing = load(getConfigName());
-		// remove all existing entries
-		Map<String, String> removedEntries = removeKeysStartingWith(existing.internalMap(), name + ".");
-		boolean existed = !removedEntries.isEmpty();
-		// remove bogus "permissions" from the JSON payload
-		Map<String, String> newSettings = additionalSettingsBuilder.build().getAsMap();
-		newSettings = removeLeadingValueFromEachKey(newSettings, "permissions");
-		newSettings = prependValueToEachKey(newSettings, name);
-		existing.put(newSettings);
-
-		save(client, request, getConfigName(), existing);
-		if (existed) {
-			return successResponse(getResourceName() + " " + name + " replaced.", getConfigName());
-		} else {
-			return createdResponse(getResourceName() + " " + name + " created.", getConfigName());
-		}
-	}
-
 	@Override
 	protected AbstractConfigurationValidator getValidator(Method method, BytesReference ref) {
 		return new ActionGroupValidator(method, ref);

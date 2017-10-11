@@ -39,12 +39,12 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		rh.keystore = "kirk-keystore.jks";
 		rh.sendHTTPClientCertificate = true;
 
-		// initial configuration, 2 users
+		// initial configuration, 5 users
 		HttpResponse response = rh
 				.executeGetRequest("_searchguard/api/configuration/" + ConfigConstants.CONFIGNAME_INTERNAL_USERS);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		Assert.assertEquals(7, settings.getAsMap().size());
+		Assert.assertEquals(8, settings.getAsMap().size());
 
 		// --- GET
 
@@ -105,6 +105,12 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		// check access not allowed
 		checkGeneralAccess(HttpStatus.SC_UNAUTHORIZED, "nagilum", "nagilum");
 
+		// add/update user, user is read only, forbidden
+		rh.sendHTTPClientCertificate = true;
+		addUserWithHash("sarek", "$2a$12$n5nubfWATfQjSYHiWtUyeOxMIxFInUHOAx8VMmGmxFNPGpaBmeB.m",
+				HttpStatus.SC_FORBIDDEN);
+
+		
 		// add users
 		rh.sendHTTPClientCertificate = true;
 		addUserWithHash("nagilum", "$2a$12$n5nubfWATfQjSYHiWtUyeOxMIxFInUHOAx8VMmGmxFNPGpaBmeB.m",
@@ -121,6 +127,10 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		// try remove user, nonexisting user
 		response = rh.executeDeleteRequest("/_searchguard/api/user/picard", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatusCode());
+
+		// try remove readonly user
+		response = rh.executeDeleteRequest("/_searchguard/api/user/sarek", new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_FORBIDDEN, response.getStatusCode());
 
 		// now really remove user
 		deleteUser("nagilum");

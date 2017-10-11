@@ -13,6 +13,7 @@ sg_role_starfleet_captains:
     - captains
 
 sg_role_starfleet_library:
+  readonly: true
   backendroles:
     - 'starfleet*'
     - ambassador

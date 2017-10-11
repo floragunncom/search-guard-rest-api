@@ -76,12 +76,17 @@ public class InternalUsersApiAction extends AbstractApiAction {
 			final Settings.Builder additionalSettingsBuilder) throws Throwable {
 		
 		final String username = request.param("name");
-		final Settings configurationSettings = loadAsSettings(getConfigName());
 		
-		// no specific resource requested, return complete config
 		if (username == null || username.length() == 0) {
-			return new Tuple<String[], RestResponse>(new String[0],
-					new BytesRestResponse(RestStatus.OK, convertToJson(configurationSettings)));
+			return badRequestResponse("No " + getResourceName() + " specified");
+		}
+
+		final Settings configurationSettings = loadAsSettings(getConfigName());
+				
+		// check if resource is writeable
+		Boolean readOnly = configurationSettings.getAsBoolean(username+ "." + ConfigConstants.CONFIGKEY_READONLY, Boolean.FALSE);
+		if (readOnly) {
+			return forbidden("Resource '"+ username +"' is read-only.");
 		}
 
 		// if password is set, it takes precedence over hash

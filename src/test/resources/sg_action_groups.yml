@@ -1,3 +1,4 @@
+# mixed mode, old and new config format
 ALL:
   - "indices:*"
 MANAGE:
@@ -14,15 +15,17 @@ DATA_ACCESS:
   - "indices:data/*"
   - indices:admin/mapping/put
 WRITE:
-  - "indices:data/write*"
-  - indices:admin/mapping/put
+  permissions:
+    - "indices:data/write*"
+    - indices:admin/mapping/put
 READ:
   - "indices:data/read*"
 DELETE:
   - "indices:data/write/delete*"
 CRUD:
-  - READ
-  - WRITE
+  permissions:
+    - READ
+    - WRITE
 SEARCH:
   - "indices:data/read/search*"
   - "indices:data/read/msearch*"
@@ -34,8 +37,10 @@ INDEX:
   - "indices:data/write/update*"
   - indices:admin/mapping/put
 GET:
-  - "indices:data/read/get*"
-  - "indices:data/read/mget*"
+  readonly: true
+  permissions:
+    - "indices:data/read/get*"
+    - "indices:data/read/mget*"
 
 # CLUSTER
 CLUSTER_ALL:

@@ -3,6 +3,7 @@ admin:
 other:
   hash: someotherhash
 sarek:
+  readonly: true
   hash: $2a$12$Ioo1uXmH.Nq/lS5dUVBEsePSmZ5pSIpVO/xKHaquU/Jvq97I7nAgG
   roles:
     - vulcan

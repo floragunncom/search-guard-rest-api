@@ -83,11 +83,15 @@ public class RolesMappingApiTest extends AbstractRestApiUnitTest {
 
 		// --- DELETE
 
-		// Non-existing role
 		rh.sendHTTPClientCertificate = true;
 
+		// Non-existing role
 		response = rh.executeDeleteRequest("/_searchguard/api/rolesmapping/idonotexist", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatusCode());
+
+		// read only role
+		response = rh.executeDeleteRequest("/_searchguard/api/rolesmapping/sg_role_starfleet_library", new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_FORBIDDEN, response.getStatusCode());
 
 		// remove complete role mapping for sg_role_starfleet_captains
 		response = rh.executeDeleteRequest("/_searchguard/api/rolesmapping/sg_role_starfleet_captains", new Header[0]);
@@ -164,6 +168,12 @@ public class RolesMappingApiTest extends AbstractRestApiUnitTest {
 		Assert.assertTrue(settings.get("hosts").equals("Array expected"));		
 		Assert.assertTrue(settings.get("users").equals("Array expected"));	
 		Assert.assertTrue(settings.get("backendroles").equals("Array expected"));	
+
+		// Read only role mapping
+		response = rh.executePutRequest("/_searchguard/api/rolesmapping/sg_role_starfleet_library",
+				FileHelper.loadFile("rolesmapping_all_access.json"), new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_FORBIDDEN, response.getStatusCode());
+
 		
 		response = rh.executePutRequest("/_searchguard/api/rolesmapping/sg_role_starfleet_captains",
 				FileHelper.loadFile("rolesmapping_all_access.json"), new Header[0]);

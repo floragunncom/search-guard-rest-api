@@ -83,6 +83,10 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
 		response = rh.executeDeleteRequest("/_searchguard/api/roles/idonotexist", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatusCode());
 
+		// read only role
+		response = rh.executeDeleteRequest("/_searchguard/api/roles/sg_transport_client", new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_FORBIDDEN, response.getStatusCode());
+
 		// remove complete role mapping for sg_role_starfleet_captains
 		response = rh.executeDeleteRequest("/_searchguard/api/roles/sg_role_starfleet_captains", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
@@ -138,7 +142,10 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
 		Assert.assertTrue(settings.get("indices").equals("Object expected"));
 		Assert.assertTrue(settings.get("cluster").equals("Array expected"));
 
-
+		// put read only role, must be forbidden
+		response = rh.executePutRequest("/_searchguard/api/roles/sg_transport_client",
+				FileHelper.loadFile("roles_captains.json"), new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_FORBIDDEN, response.getStatusCode());
 		
 		// restore starfleet role
 		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet",

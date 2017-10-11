@@ -65,7 +65,7 @@ public class ActionGroupsApiTest extends AbstractRestApiUnitTest {
 		// GET, new endpoint which replaces configuration endpoint
 		response = rh.executeGetRequest("/_searchguard/api/actiongroups", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-
+				
 		// create index
 		setupStarfleetIndex();
 
@@ -96,7 +96,7 @@ public class ActionGroupsApiTest extends AbstractRestApiUnitTest {
 
 		// put picard in captains role. Role sg_role_captains uses the CRUD
 		// action group
-		// which uses READ and WRITE actiong groups. We removed READ, so only
+		// which uses READ and WRITE action groups. We removed READ, so only
 		// WRITE is possible
 		addUserWithPassword("picard", "picard", new String[] { "captains" }, HttpStatus.SC_OK);
 		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
@@ -143,5 +143,22 @@ public class ActionGroupsApiTest extends AbstractRestApiUnitTest {
 		// read/write allowed again
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
 		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
+		
+		// -- PUT, new JSON format including readonly flag, disallowed in REST API
+		rh.sendHTTPClientCertificate = true;
+		response = rh.executePutRequest("/_searchguard/api/actiongroup/CRUD", FileHelper.loadFile("actiongroup_readonly.json"), new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+
+		// -- DELETE read only resource, must be forbidden
+		rh.sendHTTPClientCertificate = true;
+		response = rh.executeDeleteRequest("/_searchguard/api/actiongroup/GET", new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_FORBIDDEN, response.getStatusCode());
+
+		// -- PUT read only resource, must be forbidden
+		rh.sendHTTPClientCertificate = true;
+		response = rh.executePutRequest("/_searchguard/api/actiongroup/GET", FileHelper.loadFile("actiongroup_read.json"), new Header[0]);
+		Assert.assertEquals(HttpStatus.SC_FORBIDDEN, response.getStatusCode());
+		Assert.assertTrue(response.getBody().contains("Resource 'GET' is read-only."));
+
 	}
 }

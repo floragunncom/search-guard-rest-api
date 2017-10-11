@@ -107,6 +107,7 @@ sg_user:
         - READ
 
 sg_transport_client:
+  readonly: true
   cluster:
       - cluster:monitor/nodes/liveness
       #uncomment the following for sniffing

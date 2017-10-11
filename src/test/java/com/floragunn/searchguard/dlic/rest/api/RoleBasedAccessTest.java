@@ -93,7 +93,8 @@ public class RoleBasedAccessTest extends AbstractRestApiUnitTest {
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		Assert.assertEquals(settings.getAsMap().get("ALL.0"), "indices:*");
 		Assert.assertEquals(settings.getAsMap().get("CLUSTER_MONITOR.0"), "cluster:monitor/*");
-		Assert.assertEquals(settings.getAsMap().get("CRUD.0"), "READ");
+		// new format for action groups
+		Assert.assertEquals(settings.getAsMap().get("CRUD.permissions.0"), "READ");
 		
 		// --- Forbidden ---
 				

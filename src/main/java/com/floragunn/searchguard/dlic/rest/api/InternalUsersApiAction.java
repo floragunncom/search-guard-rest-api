@@ -126,9 +126,9 @@ public class InternalUsersApiAction extends AbstractApiAction {
 		save(client, request, ConfigConstants.CONFIGNAME_INTERNAL_USERS, internaluser);
 
 		if (userExisted) {
-			return successResponse("User " + username + " updated", ConfigConstants.CONFIGNAME_INTERNAL_USERS);
+			return successResponse("'" + username + "' updated", ConfigConstants.CONFIGNAME_INTERNAL_USERS);
 		} else {
-			return createdResponse("User " + username + " created", ConfigConstants.CONFIGNAME_INTERNAL_USERS);
+			return createdResponse("'" + username + "' created", ConfigConstants.CONFIGNAME_INTERNAL_USERS);
 		}
 
 	}

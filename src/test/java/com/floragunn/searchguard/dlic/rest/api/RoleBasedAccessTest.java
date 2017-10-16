@@ -148,7 +148,7 @@ public class RoleBasedAccessTest extends AbstractRestApiUnitTest {
 		// Worf, has access to internalusers API, able to delete 
 		response = rh.executeDeleteRequest("/_searchguard/api/internalusers/other", encodeBasicHeader("worf", "worf"));
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-		Assert.assertTrue(response.getBody().contains("user other deleted"));
+		Assert.assertTrue(response.getBody().contains("'other' deleted"));
 
 		// Worf, has access to internalusers API, user "other" deleted now
 		response = rh.executeGetRequest("/_searchguard/api/internalusers/other", encodeBasicHeader("worf", "worf"));
@@ -164,7 +164,7 @@ public class RoleBasedAccessTest extends AbstractRestApiUnitTest {
 		// Worf, has access to roles API, able to delete 
 		response = rh.executeDeleteRequest("/_searchguard/api/roles/sg_role_starfleet_captains", encodeBasicHeader("worf", "worf"));
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-		Assert.assertTrue(response.getBody().contains("role sg_role_starfleet_captains deleted"));
+		Assert.assertTrue(response.getBody().contains("'sg_role_starfleet_captains' deleted"));
 
 		// Worf, has access to roles API, captains role deleted now
 		response = rh.executeGetRequest("/_searchguard/api/roles/sg_role_starfleet_captains", encodeBasicHeader("worf", "worf"));
@@ -247,7 +247,7 @@ public class RoleBasedAccessTest extends AbstractRestApiUnitTest {
 		// Delete captions role
 		response = rh.executeDeleteRequest("/_searchguard/api/roles/sg_role_starfleet_captains", encodeBasicHeader("test", "test"));
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-		Assert.assertTrue(response.getBody().contains("role sg_role_starfleet_captains deleted"));
+		Assert.assertTrue(response.getBody().contains("'sg_role_starfleet_captains' deleted"));
 
 		// GET captions role
 		response = rh.executeGetRequest("/_searchguard/api/roles/sg_role_starfleet_captains", encodeBasicHeader("test", "test"));

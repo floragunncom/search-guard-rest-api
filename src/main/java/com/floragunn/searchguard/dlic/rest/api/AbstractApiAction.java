@@ -149,7 +149,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 		if (modified) {
 			save(client, request, getConfigName(), existing);
-			return successResponse(getResourceName() + " " + name + " deleted.", getConfigName());
+			return successResponse("'" + name + "' deleted.", getConfigName());
 		} else {
 			return notFound(getResourceName() + " " + name + " not found.");
 		}
@@ -184,9 +184,9 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		existing.put(prependValueToEachKey(additionalSettingsBuilder.build().getAsMap(), name + "."));
 		save(client, request, getConfigName(), existing);
 		if (existed) {
-			return successResponse(getResourceName() + " " + name + " updated.", getConfigName());
+			return successResponse("'" + name + "' updated.", getConfigName());
 		} else {
-			return createdResponse(getResourceName() + " " + name + " created.", getConfigName());
+			return createdResponse("'" + name + "' created.", getConfigName());
 		}
 	}
 

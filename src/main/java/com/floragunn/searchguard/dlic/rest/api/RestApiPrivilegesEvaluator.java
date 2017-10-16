@@ -208,6 +208,16 @@ public class RestApiPrivilegesEvaluator {
 	 *         TODO: log failed attempt in audit log
 	 */
 	public String checkAccessPermissions(RestRequest request, Endpoint endpoint) throws IOException {
+		
+		if (logger.isDebugEnabled()) {
+			logger.debug("Checking admin access for endpoint {}, path {} and method {}", endpoint.name(),  request.path(), request.method().name());
+		}
+
+		String roleBasedAccessFailureReason = checkRoleBasedAccessPermissions(request, endpoint);
+		// Role based access granted
+		if (roleBasedAccessFailureReason == null) {
+			return null;
+		}
 
 		String certBasedAccessFailureReason = checkAdminCertBasedAccessPermissions(request);
 		// TLS access granted, skip checking roles
@@ -215,12 +225,6 @@ public class RestApiPrivilegesEvaluator {
 			return null;
 		}
 
-		String roleBasedAccessFailureReason = checkRoleBasedAccessPermissions(request, endpoint);
-
-		// Role based access granted
-		if (roleBasedAccessFailureReason == null) {
-			return null;
-		}
 
 		return constructAccessErrorMessage(roleBasedAccessFailureReason, certBasedAccessFailureReason);
 	}
@@ -323,6 +327,9 @@ public class RestApiPrivilegesEvaluator {
 	}
 	
 	private String checkRoleBasedAccessPermissions(RestRequest request, Endpoint endpoint) {
+		if (logger.isTraceEnabled()) {
+			logger.trace("Checking role based admin access for endpoint {} and method {}", endpoint.name(), request.method().name());
+		}
 		// Role based access. Check that user has role suitable for admin access
 		// and that the role has also access to this endpoint.
 		if (this.roleBasedAccessEnabled) {
@@ -351,16 +358,16 @@ public class RestApiPrivilegesEvaluator {
 
 				// no settings, all methods for this endpoint allowed
 				if (disabledMethodsForEndpoint == null || disabledMethodsForEndpoint.isEmpty()) {
-					if (logger.isTraceEnabled()) {
-						logger.trace("No disabled methods for user {} and endpoint {}, access allowed ", user, endpoint);
+					if (logger.isDebugEnabled()) {
+						logger.debug("No disabled methods for user {} and endpoint {}, access allowed ", user, endpoint);
 					}
 					return null;
 				}
 
 				// some methods disabled, check requested method
 				if (!disabledMethodsForEndpoint.contains(request.method())) {
-					if (logger.isTraceEnabled()) {
-						logger.trace("Request method {} for user {} and endpoint {} not restricted, access allowed ", request.method(), user, endpoint);
+					if (logger.isDebugEnabled()) {
+						logger.debug("Request method {} for user {} and endpoint {} not restricted, access allowed ", request.method(), user, endpoint);
 					}
 					return null;
 				}
@@ -372,7 +379,7 @@ public class RestApiPrivilegesEvaluator {
 			} else {
 				// no, but maybe the request contains a client certificate.
 				// Remember error reason for better response message later on.
-				logger.info("User {} with Search Guard roles {} does not have any role privileged for admin access, checking admin TLS certificate now.", user, userRoles);
+				logger.info("User {} with Search Guard roles {} does not have any role privileged for admin access.", user, userRoles);
 				return "User " + user.getName() + " with Search Guard Roles " + userRoles + " does not have any role privileged for admin access";
 			}
 		}
@@ -380,6 +387,10 @@ public class RestApiPrivilegesEvaluator {
 	}
 
 	private String checkAdminCertBasedAccessPermissions(RestRequest request) throws IOException {
+		if (logger.isTraceEnabled()) {
+			logger.trace("Checking certificate based admin access for path {} and method {}", request.path(), request.method().name());
+		}
+		
 		// Certificate based access, Check if we have an admin TLS certificate
 		SSLInfo sslInfo = SSLRequestHelper.getSSLInfo(settings, configPath, request, principalExtractor);
 

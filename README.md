@@ -7,22 +7,9 @@ This module for [Search Guard](https://github.com/floragunncom/search-guard) add
 
 ## Downloads
 
-* [Elasticsearch 5.3.x and 5.4.x / REST API module 5.3-4](http://search.maven.org/remotecontent?filepath=com/floragunn/dlic-search-guard-rest-api/5.3-4/dlic-search-guard-rest-api-5.3-4-jar-with-dependencies.jar)
+**Choose the module version matching your Elasticsearch version, and download the jar with dependencies here:**
 
-* [Elasticsearch 5.2.x / REST API module 5.2-4](http://search.maven.org/remotecontent?filepath=com/floragunn/dlic-search-guard-rest-api/5.2-4/dlic-search-guard-rest-api-5.2-4-jar-with-dependencies.jar)
-
-* [Elasticsearch 5.1.x / REST API module 5.1-4](http://search.maven.org/remotecontent?filepath=com/floragunn/dlic-search-guard-rest-api/5.1-4/dlic-search-guard-rest-api-5.1-4-jar-with-dependencies.jar)
-
-* [Elasticsearch 5.0.x / REST API module 5.0-4](http://search.maven.org/remotecontent?filepath=com/floragunn/dlic-search-guard-rest-api/5.0-4/dlic-search-guard-rest-api-5.0-4-jar-with-dependencies.jar)
-
-* [Elasticsearch 2.4.x / REST API module 2.4-4](http://search.maven.org/remotecontent?filepath=com/floragunn/dlic-search-guard-rest-api/2.4-4/dlic-search-guard-rest-api-2.4-4-jar-with-dependencies.jar)
-
-* [Elasticsearch 2.3.x / REST API module 2.3-4](http://search.maven.org/remotecontent?filepath=com/floragunn/dlic-search-guard-rest-api/2.3-4/dlic-search-guard-rest-api-2.3-4-jar-with-dependencies.jar)
-
-All versions:
-[Maven central](http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22com.floragunn%22%20AND%20a%3A%22dlic-search-guard-rest-api%22)
-
-**Choose the module version matching your Elasticsearch version, and download the jar with dependencies.**
+https://github.com/floragunncom/search-guard-rest-api/wiki
 
 ## Installation
 
@@ -46,7 +33,7 @@ Please refer to the official Search Guard documentation for installation and con
 This software is free of charge for non-commercial and academic use. For commercial use in a production environment you have to obtain a [license](https://floragunn.com/searchguard/searchguard-license-support/). 
 
 ## License
-Copyright 2016 by floragunn GmbH - All rights reserved 
+Copyright 2016-2017 by floragunn GmbH - All rights reserved 
 
 Unless required by applicable law or agreed to in writing, software
 distributed here is distributed on an "AS IS" BASIS,

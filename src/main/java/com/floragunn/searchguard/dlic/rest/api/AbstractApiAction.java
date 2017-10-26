@@ -329,7 +329,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 					public void onFailure(final Exception e) {
 						sem.release();
 						exception.add(e);
-						logger.error("Cannot update {} due to {}", e, config, e);
+						logger.error("Cannot update {} due to", config, e);
 					}
 				});
 
@@ -394,7 +394,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 					@Override
 					public void onFailure(final Exception e) {
 						sem.release();
-						logger.error("Cannot update {} due to {}", e, Arrays.toString(response.v1()), e);
+						logger.error("Cannot update {} due to", Arrays.toString(response.v1()), e);
 						exception.add(e);
 					}
 
@@ -416,7 +416,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			}
 
 		} catch (final Throwable e) {
-			logger.error("Unexpected exception {}", e, e);
+			logger.error("Unexpected exception {}", e.toString(), e);
 			request.params().clear();
 			return channel -> channel
 					.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, e.toString()));

@@ -89,7 +89,7 @@ public class LicenseApiAction extends AbstractApiAction {
 			public void onFailure(final Exception e) {
 				try {
 					exception.add(e);
-					logger.error("Cannot fetch license information due to {}", e);							
+					logger.error("Cannot fetch license information due to", e);							
 				} finally {
 					sem.release();
 				}
@@ -106,7 +106,7 @@ public class LicenseApiAction extends AbstractApiAction {
 					}					
 				} catch (IOException e) {
 					exception.add(e);
-					logger.error("Cannot fetch convert license to XContent due to {}", e);		
+					logger.error("Cannot fetch convert license to XContent due to", e);		
 				} finally {
 					sem.release();
 				}
@@ -124,7 +124,7 @@ public class LicenseApiAction extends AbstractApiAction {
 
 		if (exception.size() != 0) {
 		    request.params().clear();
-		    logger.error("Unable to fetch license due to {}", exception.get(0));
+		    logger.error("Unable to fetch license due to", exception.get(0));
 		    return internalErrorResponse("Unable to fetch license: " + exception.get(0).getMessage());
 		}
 			
@@ -148,7 +148,7 @@ public class LicenseApiAction extends AbstractApiAction {
 		try {
 			plaintextLicense = LicenseHelper.validateLicense(licenseString);					
 		} catch (Exception e) {
-			log.error("Could not decode license {} due to {}", licenseString, e);
+			log.error("Could not decode license {} due to", licenseString, e);
 			return badRequestResponse("License could not be decoded due to: " + e.getMessage());
 		}
 		

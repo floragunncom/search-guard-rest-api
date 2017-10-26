@@ -85,7 +85,7 @@ public class FlushCacheApiAction extends AbstractApiAction {
 					public void onFailure(Exception e) {
 						sem.release();
 						exception.add(e);
-						logger.error("Cannot flush cache due to {}", e);
+						logger.error("Cannot flush cache due to {}", e.toString(), e);
 					}
 
 				}
@@ -97,7 +97,7 @@ public class FlushCacheApiAction extends AbstractApiAction {
 		}
 
 		if (exception.size() > 0) {
-			logger.error("Cannot flush cache due to {}", exception.get(0));
+			logger.error("Cannot flush cache due to", exception.get(0));
 			return internalErrorResponse("Cannot flush cache due to "+ exception.get(0).getMessage());
 		}		
 		

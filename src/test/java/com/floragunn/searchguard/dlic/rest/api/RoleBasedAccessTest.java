@@ -1,6 +1,5 @@
 package com.floragunn.searchguard.dlic.rest.api;
 
-import org.apache.http.Header;
 import org.apache.http.HttpStatus;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentType;

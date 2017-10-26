@@ -471,7 +471,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 						+ Arrays.toString(node.getUpdatedConfigTypes()));
 			}
 
-			success = success & successNode;
+			success = success && successNode;
 		}
 
 		return success;

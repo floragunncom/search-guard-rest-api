@@ -83,7 +83,7 @@ public class PermissionsInfoAction extends BaseRestHandler {
 
             @Override
             public void accept(RestChannel channel) throws Exception {
-                XContentBuilder builder = channel.newBuilder();
+                XContentBuilder builder = channel.newBuilder(); //NOSONAR
                 BytesRestResponse response = null;
                 
                 try {
@@ -97,7 +97,7 @@ public class PermissionsInfoAction extends BaseRestHandler {
 
                     builder.startObject();
                     builder.field("user", user);
-                    builder.field("user_name", user==null?null:user.getName());
+                    builder.field("user_name", user==null?null:user.getName()); //NOSONAR
                     builder.field("has_api_access", hasApiAccess);
                     builder.startObject("disabled_endpoints");
                     for(Entry<Endpoint, List<Method>>  entry : disabledEndpoints.entrySet()) {
@@ -107,11 +107,15 @@ public class PermissionsInfoAction extends BaseRestHandler {
                     builder.endObject();
                     response = new BytesRestResponse(RestStatus.OK, builder);
                 } catch (final Exception e1) {
-                    builder = channel.newBuilder();
+                    builder = channel.newBuilder(); //NOSONAR
                     builder.startObject();
                     builder.field("error", e1.toString());
                     builder.endObject();
                     response = new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, builder);
+                } finally {
+                    if(builder != null) {
+                        builder.close();
+                    }
                 }
 
                 channel.sendResponse(response);

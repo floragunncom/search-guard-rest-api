@@ -153,35 +153,36 @@ public abstract class AbstractConfigurationValidator {
 
 	private boolean checkDatatypes() throws Exception {		
 		String contentAsJson = XContentHelper.convertToJson(content, false, XContentType.YAML);
-		JsonParser parser = factory.createParser(contentAsJson);
-		JsonToken token = null;
-		while ((token = parser.nextToken()) != null) {
-			if(token.equals(JsonToken.FIELD_NAME)) {
-				String currentName = parser.getCurrentName();
-				DataType dataType = allowedKeys.get(currentName);
-				if(dataType != null) {
-					JsonToken valueToken = parser.nextToken();
-					switch (dataType) {
-					case STRING:
-						if(!valueToken.equals(JsonToken.VALUE_STRING)) {
-							wrongDatatypes.put(currentName, "String expected");
-						}
-						break;
-					case ARRAY:
-						if(!valueToken.equals(JsonToken.START_ARRAY) && !valueToken.equals(JsonToken.END_ARRAY)) {
-							wrongDatatypes.put(currentName, "Array expected");
-						}
-						break;
-					case OBJECT:
-						if(!valueToken.equals(JsonToken.START_OBJECT) && !valueToken.equals(JsonToken.END_OBJECT)) {
-							wrongDatatypes.put(currentName, "Object expected");
-						}
-						break;						
-					}
-				}
-			}
+		try(JsonParser parser = factory.createParser(contentAsJson)) {
+    		JsonToken token = null;
+    		while ((token = parser.nextToken()) != null) {
+    			if(token.equals(JsonToken.FIELD_NAME)) {
+    				String currentName = parser.getCurrentName();
+    				DataType dataType = allowedKeys.get(currentName);
+    				if(dataType != null) {
+    					JsonToken valueToken = parser.nextToken();
+    					switch (dataType) {
+    					case STRING:
+    						if(!valueToken.equals(JsonToken.VALUE_STRING)) {
+    							wrongDatatypes.put(currentName, "String expected");
+    						}
+    						break;
+    					case ARRAY:
+    						if(!valueToken.equals(JsonToken.START_ARRAY) && !valueToken.equals(JsonToken.END_ARRAY)) {
+    							wrongDatatypes.put(currentName, "Array expected");
+    						}
+    						break;
+    					case OBJECT:
+    						if(!valueToken.equals(JsonToken.START_OBJECT) && !valueToken.equals(JsonToken.END_OBJECT)) {
+    							wrongDatatypes.put(currentName, "Object expected");
+    						}
+    						break;						
+    					}
+    				}
+    			}
+    		}
+    		return wrongDatatypes.isEmpty();
 		}
-		return wrongDatatypes.isEmpty();
 	}
 
 	public XContentBuilder errorsAsXContent() {

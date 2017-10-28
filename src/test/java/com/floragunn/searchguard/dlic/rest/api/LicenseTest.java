@@ -32,20 +32,20 @@ import com.floragunn.searchguard.test.helper.rest.RestHelper.HttpResponse;
 
 public class LicenseTest extends AbstractRestApiUnitTest {
 
-	private final static String CONFIG_LICENSE_KEY = "searchguard.dynamic.license";
-	private final static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+	protected final static String CONFIG_LICENSE_KEY = "searchguard.dynamic.license";
+	protected final static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 	private Map<String, String> originalConfig;
 	
 	// start dates
-	private LocalDate expiredStartDate = LocalDate.of(2016, Month.JANUARY, 31);
-	private LocalDate validStartDate = LocalDate.of(2017, Month.JANUARY, 31);
-	private LocalDate notStartedStartDate = LocalDate.of(2116, Month.JANUARY, 31);
+	protected LocalDate expiredStartDate = LocalDate.of(2016, Month.JANUARY, 31);
+	protected LocalDate validStartDate = LocalDate.of(2017, Month.JANUARY, 31);
+	protected LocalDate notStartedStartDate = LocalDate.of(2116, Month.JANUARY, 31);
 
 	// expiry dates
-	private LocalDate expiredExpiryDate = validStartDate.plusYears(1);
-	private LocalDate validExpiryDate = validStartDate.plusYears(100);
-	private LocalDate notStartedExpiryDate = notStartedStartDate.plusYears(1);
-	private LocalDate trialExpiryDate = LocalDate.now().plusDays(91);
+	protected LocalDate expiredExpiryDate = LocalDate.of(2017, Month.JANUARY, 31);
+	protected LocalDate validExpiryDate = validStartDate.plusYears(100);
+	protected LocalDate notStartedExpiryDate = notStartedStartDate.plusYears(1);
+	protected LocalDate trialExpiryDate = LocalDate.now().plusDays(91);
 	
 	@Test
 	public void testLicenseApi() throws Exception {
@@ -63,12 +63,11 @@ public class LicenseTest extends AbstractRestApiUnitTest {
 		Map<String, String> currentConfig;
 		
 		// check license exists - has to be trial license
-		// Map<String, String> settingsAsMap = getCurrentLicense()
-		// Assert.assertEquals(SearchGuardLicense.Type.TRIAL.name(), settingsAsMap.get("sg_license.type"));
-		// Assert.assertEquals("unlimited", settingsAsMap.get("sg_license.allowed_node_count_per_cluster"));
-		// Assert.assertEquals("true", settingsAsMap.get("sg_license.is_valid"));
-		// Assert.assertEquals(issueDate.format(formatter), settingsAsMap.get("sg_license.start_date"));
-		// Assert.assertEquals(expiryDate.format(formatter), settingsAsMap.get("sg_license.expiry_date"));
+		 Map<String, String> settingsAsMap = getCurrentLicense();
+		 Assert.assertEquals(SearchGuardLicense.Type.TRIAL.name(), settingsAsMap.get("sg_license.type"));
+		 Assert.assertEquals("unlimited", settingsAsMap.get("sg_license.allowed_node_count_per_cluster"));
+		 Assert.assertEquals("true", settingsAsMap.get("sg_license.is_valid"));
+		 Assert.assertEquals("false", settingsAsMap.get("sg_license.is_expired"));
 
 		// upload new licenses - all valid forever
 		uploadAndCheckValidLicense("full_valid_forever.txt", HttpStatus.SC_CREATED); // first license upload, hence 201 return code
@@ -142,11 +141,11 @@ public class LicenseTest extends AbstractRestApiUnitTest {
 		return "{ \"sg_license\": \"" + licenseString + "\"}";
 	}
 
-	private final String loadLicenseKey(String filename) throws Exception {
+	protected final String loadLicenseKey(String filename) throws Exception {
 		return FileHelper.loadFile("license/" + filename);
 	}
 	
-	private final Map<String, String> checkCurrentLicenseProperties(SearchGuardLicense.Type type, Boolean isValid, String nodeCount,LocalDate startDate, LocalDate expiryDate ) throws Exception {
+	protected final Map<String, String> checkCurrentLicenseProperties(SearchGuardLicense.Type type, Boolean isValid, String nodeCount,LocalDate startDate, LocalDate expiryDate ) throws Exception {
 		 Map<String, String> settingsAsMap = getCurrentLicense();
 		 Assert.assertEquals(type.name(), settingsAsMap.get("sg_license.type"));
 		 Assert.assertEquals(nodeCount, settingsAsMap.get("sg_license.allowed_node_count_per_cluster"));
@@ -156,11 +155,11 @@ public class LicenseTest extends AbstractRestApiUnitTest {
 		 return settingsAsMap;
 	}
 		
-	private final void uploadAndCheckValidLicense(String licenseFileName) throws Exception {
+	protected final void uploadAndCheckValidLicense(String licenseFileName) throws Exception {
 	 uploadAndCheckValidLicense(licenseFileName, HttpStatus.SC_OK);
 	}
 
-	private final Map<String, String> uploadAndCheckInvalidLicense(String licenseFileName, int statusCode) throws Exception {
+	protected final Map<String, String> uploadAndCheckInvalidLicense(String licenseFileName, int statusCode) throws Exception {
 		String licenseKey = loadLicenseKey(licenseFileName);
 		HttpResponse response = rh.executePutRequest("/_searchguard/api/license", createLicenseRequestBody(licenseKey), new Header[0]);
 		Assert.assertEquals(statusCode, response.getStatusCode());
@@ -168,7 +167,7 @@ public class LicenseTest extends AbstractRestApiUnitTest {
 		return settings.getAsMap();
 	}
 
-	private final void uploadAndCheckValidLicense(String licenseFileName, int statusCode) throws Exception {
+	protected final void uploadAndCheckValidLicense(String licenseFileName, int statusCode) throws Exception {
 		String licenseKey = loadLicenseKey(licenseFileName);
 		HttpResponse response = rh.executePutRequest("/_searchguard/api/license", createLicenseRequestBody(licenseKey), new Header[0]);
 		Assert.assertEquals(statusCode, response.getStatusCode());
@@ -179,14 +178,14 @@ public class LicenseTest extends AbstractRestApiUnitTest {
 		Assert.assertEquals(expectectConfig, config); 
 	}
 	
-	private final Map<String, String> getCurrentLicense() throws Exception {
+	protected final Map<String, String> getCurrentLicense() throws Exception {
 		HttpResponse response = rh.executeGetRequest("_searchguard/api/license");
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		return settings.getAsMap();
 	}
 
-	private final Map<String, String> getCurrentConfig() throws Exception {
+	protected final Map<String, String> getCurrentConfig() throws Exception {
 		HttpResponse response = rh.executeGetRequest("_searchguard/api/configuration/config");
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();

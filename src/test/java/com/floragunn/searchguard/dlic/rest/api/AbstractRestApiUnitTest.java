@@ -49,6 +49,21 @@ public abstract class AbstractRestApiUnitTest extends SingleClusterTest {
 		rh.keystore = "kirk-keystore.jks";
 	}
 
+	protected final void setupAllowInvalidLicenses() throws Exception {
+		Settings.Builder builder = Settings.builder();
+
+		builder.put("searchguard.ssl.http.enabled", true)
+				.put("searchguard.ssl.http.keystore_filepath",
+						FileHelper.getAbsoluteFilePathFromClassPath("node-0-keystore.jks"))
+				.put("searchguard.ssl.http.truststore_filepath",
+						FileHelper.getAbsoluteFilePathFromClassPath("truststore.jks"))
+				.put("searchguard.unsupported.restapi.accept_invalid_license", true);
+		
+		setup(Settings.EMPTY, new DynamicSgConfig(), builder.build(), init);
+		rh = restHelper();
+		rh.keystore = "kirk-keystore.jks";
+	}
+	
 	protected final void setupWithRestRoles() throws Exception {
 		Settings.Builder builder = Settings.builder();
 

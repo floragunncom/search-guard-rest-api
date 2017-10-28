@@ -154,8 +154,8 @@ public class LicenseApiAction extends AbstractApiAction {
 		
 		SearchGuardLicense license = new SearchGuardLicense(XContentHelper.convertToMap(XContentType.JSON.xContent(), plaintextLicense, true), cs);
 		
-		// check if license is valid at all
-		if (!license.isValid()) {
+		// check if license is valid at all, honor unsupported switch in es.yml 
+		if (!license.isValid() && !acceptInvalidLicense) {
 			return badRequestResponse("License invalid due to: " + String.join(",", license.getMsgs()));
 		}
 				

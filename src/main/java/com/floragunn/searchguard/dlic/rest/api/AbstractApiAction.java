@@ -77,6 +77,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	final ThreadPool threadPool;
 	private String searchguardIndex;
 	private final RestApiPrivilegesEvaluator restApiPrivilegesEvaluator;
+	protected final Boolean acceptInvalidLicense;
 
 	static {
 		printLicenseInfo();
@@ -89,6 +90,8 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		super(settings);
 		this.searchguardIndex = settings.get(ConfigConstants.SEARCHGUARD_CONFIG_INDEX_NAME,
 				ConfigConstants.SG_DEFAULT_CONFIG_INDEX);
+		this.acceptInvalidLicense = settings.getAsBoolean(ConfigConstants.SEARCHGUARD_UNSUPPORTED_RESTAPI_ACCEPT_INVALID_LICENSE, Boolean.FALSE);
+
 		this.cl = cl;
 		this.cs = cs;
 		this.threadPool = threadPool;

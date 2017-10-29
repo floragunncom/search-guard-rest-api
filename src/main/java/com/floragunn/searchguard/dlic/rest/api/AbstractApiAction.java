@@ -370,7 +370,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			// auditLog.logSgIndexAttempt(request, action); //TODO add method
 			// for rest request
 			request.params().clear();
-			final BytesRestResponse response = new BytesRestResponse(RestStatus.FORBIDDEN, authError);
+			final BytesRestResponse response = (BytesRestResponse)forbidden("No permission to access REST API: " + authError).v2();
 			return channel -> channel.sendResponse(response);
 		}
 

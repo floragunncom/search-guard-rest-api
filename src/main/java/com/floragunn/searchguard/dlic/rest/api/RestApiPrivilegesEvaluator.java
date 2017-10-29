@@ -415,7 +415,7 @@ public class RestApiPrivilegesEvaluator {
 	}
 
 	private String constructAccessErrorMessage(String roleBasedAccessFailure, String certBasedAccessFailure) {
-		return roleBasedAccessFailure + "; " + certBasedAccessFailure;
+		return roleBasedAccessFailure + ". " + certBasedAccessFailure;
 	}
 
 }

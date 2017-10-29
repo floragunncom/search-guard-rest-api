@@ -234,7 +234,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 	protected boolean ensureIndexExists(final Client client) {
 		if (!cs.state().metaData().hasConcreteIndex(this.searchguardIndex)) {
-			log.error("Search Guard index does not exist yet, try to creat it.");
+			log.error("Search Guard index does not exist yet, try to create it.");
 			return false;
 		}
 		return true;

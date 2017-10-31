@@ -13,7 +13,7 @@ import com.floragunn.searchguard.test.helper.rest.RestHelper.HttpResponse;
 public class InvalidLicenseTest extends LicenseTest {
 
 	@Test
-	public void testActionGroupsApi() throws Exception {
+	public void testInvalidLicenseUpload() throws Exception {
 
 		setupAllowInvalidLicenses();
 		rh.sendHTTPClientCertificate = true;
@@ -23,8 +23,8 @@ public class InvalidLicenseTest extends LicenseTest {
 		Assert.assertEquals(201, response.getStatusCode());
 		
 		 Map<String, String> settingsAsMap = getCurrentLicense();
-		 Assert.assertEquals(SearchGuardLicense.Type.SINGLE, settingsAsMap.get("sg_license.type"));
-		 Assert.assertEquals(1, settingsAsMap.get("sg_license.allowed_node_count_per_cluster"));
+		 Assert.assertEquals(SearchGuardLicense.Type.SINGLE.name(), settingsAsMap.get("sg_license.type"));
+		 Assert.assertEquals("1", settingsAsMap.get("sg_license.allowed_node_count_per_cluster"));
 		 Assert.assertEquals(Boolean.FALSE.toString(), settingsAsMap.get("sg_license.is_valid"));
 		 Assert.assertEquals(expiredStartDate.format(formatter), settingsAsMap.get("sg_license.start_date"));
 		 Assert.assertEquals(expiredExpiryDate.format(formatter), settingsAsMap.get("sg_license.expiry_date"));

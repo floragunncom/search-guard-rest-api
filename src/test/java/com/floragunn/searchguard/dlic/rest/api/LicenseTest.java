@@ -96,7 +96,8 @@ public class LicenseTest extends AbstractRestApiUnitTest {
 		result = uploadAndCheckInvalidLicense("sme_expired.txt", HttpStatus.SC_BAD_REQUEST);
 		// Make sure license was rejected and old values are still in place
 		checkCurrentLicenseProperties(SearchGuardLicense.Type.FULL, Boolean.TRUE, "unlimited", notStartedStartDate, notStartedExpiryDate);
-		Assert.assertEquals("License invalid due to: License is expired", result.get("message"));
+		Assert.assertTrue(result.get("message").contains("License is expired"));
+		Assert.assertTrue(result.get("message").contains("Only 1 node(s) allowed"));
 		
 		// Error cases. In each case, previous license the following uploaded license needs to stay intact:
 		// upload new licenses - all valid forever

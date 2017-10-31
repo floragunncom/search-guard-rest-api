@@ -25,6 +25,7 @@ import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest.Method;
 import org.elasticsearch.threadpool.ThreadPool;
 
+import com.floragunn.searchguard.auditlog.AuditLog;
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.IndexBaseConfigurationRepository;
 import com.floragunn.searchguard.configuration.PrivilegesEvaluator;
@@ -38,8 +39,8 @@ public class RolesMappingApiAction extends AbstractApiAction {
 	@Inject
 	public RolesMappingApiAction(final Settings settings, final Path configPath, final RestController controller, final Client client,
 			final AdminDNs adminDNs, final IndexBaseConfigurationRepository cl, final ClusterService cs,
-            final PrincipalExtractor principalExtractor, final PrivilegesEvaluator evaluator, ThreadPool threadPool) {
-		super(settings, configPath, controller, client, adminDNs, cl, cs, principalExtractor, evaluator, threadPool);
+            final PrincipalExtractor principalExtractor, final PrivilegesEvaluator evaluator, ThreadPool threadPool, AuditLog auditLog) {
+		super(settings, configPath, controller, client, adminDNs, cl, cs, principalExtractor, evaluator, threadPool, auditLog);
 		
 		controller.registerHandler(Method.GET, "/_searchguard/api/rolesmapping/", this);
 		controller.registerHandler(Method.GET, "/_searchguard/api/rolesmapping/{name}", this);

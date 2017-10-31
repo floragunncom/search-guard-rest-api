@@ -15,6 +15,7 @@
 package com.floragunn.searchguard.dlic.rest.api;
 
 import java.nio.file.Path;
+
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.bytes.BytesReference;
@@ -24,6 +25,8 @@ import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestRequest.Method;
 import org.elasticsearch.threadpool.ThreadPool;
+
+import com.floragunn.searchguard.auditlog.AuditLog;
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.IndexBaseConfigurationRepository;
 import com.floragunn.searchguard.configuration.PrivilegesEvaluator;
@@ -37,8 +40,8 @@ public class ActionGroupsApiAction extends AbstractApiAction {
 	@Inject
 	public ActionGroupsApiAction(final Settings settings, final Path configPath, final RestController controller, final Client client,
 			final AdminDNs adminDNs, final IndexBaseConfigurationRepository cl, final ClusterService cs,
-            final PrincipalExtractor principalExtractor, final PrivilegesEvaluator evaluator, ThreadPool threadPool) {
-		super(settings, configPath, controller, client, adminDNs, cl, cs, principalExtractor, evaluator, threadPool);
+            final PrincipalExtractor principalExtractor, final PrivilegesEvaluator evaluator, ThreadPool threadPool, AuditLog auditLog) {
+		super(settings, configPath, controller, client, adminDNs, cl, cs, principalExtractor, evaluator, threadPool, auditLog);
 
 		// legacy mapping for backwards compatibility
 		// TODO: remove in SG7

@@ -60,6 +60,7 @@ import com.floragunn.searchguard.action.configupdate.ConfigUpdateAction;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateNodeResponse;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateRequest;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateResponse;
+import com.floragunn.searchguard.auditlog.AuditLog;
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.IndexBaseConfigurationRepository;
 import com.floragunn.searchguard.configuration.PrivilegesEvaluator;
@@ -67,6 +68,7 @@ import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValid
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator.ErrorType;
 import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
 import com.floragunn.searchguard.support.ConfigConstants;
+import com.floragunn.searchguard.user.User;
 
 public abstract class AbstractApiAction extends BaseRestHandler {
 
@@ -78,6 +80,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	private String searchguardIndex;
 	private final RestApiPrivilegesEvaluator restApiPrivilegesEvaluator;
 	protected final Boolean acceptInvalidLicense;
+	protected final AuditLog auditLog;
 
 	static {
 		printLicenseInfo();
@@ -86,7 +89,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	protected AbstractApiAction(final Settings settings, final Path configPath, final RestController controller,
 			final Client client, final AdminDNs adminDNs, final IndexBaseConfigurationRepository cl,
 			final ClusterService cs, final PrincipalExtractor principalExtractor, final PrivilegesEvaluator evaluator,
-			ThreadPool threadPool) {
+			ThreadPool threadPool, AuditLog auditLog) {
 		super(settings);
 		this.searchguardIndex = settings.get(ConfigConstants.SEARCHGUARD_CONFIG_INDEX_NAME,
 				ConfigConstants.SG_DEFAULT_CONFIG_INDEX);
@@ -97,6 +100,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		this.threadPool = threadPool;
 		this.restApiPrivilegesEvaluator = new RestApiPrivilegesEvaluator(settings, adminDNs, evaluator,
 				principalExtractor, configPath, threadPool);
+		this.auditLog = auditLog;
 	}
 
 	protected abstract AbstractConfigurationValidator getValidator(final Method method, BytesReference ref);
@@ -367,7 +371,8 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 		if (authError != null) {
 			logger.error("No permission to access REST API: " + authError);
-			// auditLog.logSgIndexAttempt(request, action); //TODO add method
+			final User user = (User) threadPool.getThreadContext().getTransient(ConfigConstants.SG_USER);
+			auditLog.logMissingPrivileges(authError, user==null?null:user.getName(), request);
 			// for rest request
 			request.params().clear();
 			final BytesRestResponse response = (BytesRestResponse)forbidden("No permission to access REST API: " + authError).v2();

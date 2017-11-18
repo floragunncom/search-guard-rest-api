@@ -5,8 +5,7 @@
   here is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS 
   OF ANY KIND, either express or implied. -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -16,7 +15,7 @@
     </parent>
 
     <artifactId>dlic-search-guard-rest-api</artifactId>
-    <version>6.0-7.beta1-SNAPSHOT</version>
+    <version>6.0-7.beta1</version>
     <packaging>jar</packaging>
 
     <name>Search Guard Management REST API</name>
@@ -34,7 +33,7 @@
         <url>https://github.com/floragunncom/search-guard-rest-api.git</url>
         <connection>scm:git:git@github.com:floragunncom/search-guard-rest-api.git</connection>
         <developerConnection>scm:git:git@github.com:floragunncom/search-guard-rest-api.git</developerConnection>
-        <tag>HEAD</tag>
+        <tag>ves-6.0-7.beta1</tag>
     </scm>
 
     <issueManagement>
@@ -42,7 +41,7 @@
         <url>https://github.com/floragunncom/search-guard-rest-api/issues</url>
     </issueManagement>
 
-    <contributors/>
+    <contributors />
 
     <dependencies>
         <dependency>

@@ -83,7 +83,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	protected final AuditLog auditLog;
 
 	static {
-		printLicenseInfo();
+		//printLicenseInfo();
 	}
 
 	protected AbstractApiAction(final Settings settings, final Path configPath, final RestController controller,

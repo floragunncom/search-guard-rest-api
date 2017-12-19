@@ -237,7 +237,6 @@ public abstract class AbstractConfigurationValidator {
 		try {
 		    return Settings.builder().loadFromSource(ref.utf8ToString(), XContentType.JSON);
 		} catch (final Exception e) {
-		    e.printStackTrace();
 			throw ExceptionsHelper.convertToElastic(e);
 		}
 	}

@@ -87,9 +87,9 @@ public class RoleBasedAccessTest extends AbstractRestApiUnitTest {
 		response = rh.executeGetRequest("/_searchguard/api/rolesmapping", encodeBasicHeader("worf", "worf"));
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		Assert.assertEquals(settings.get("sg_all_access.users.0"), "nagilum");
-		Assert.assertEquals(settings.get("sg_role_starfleet_library.backendroles.0"), "starfleet*");
-		Assert.assertEquals(settings.get("sg_zdummy_all.users.0"), "bug108");
+		Assert.assertEquals(settings.getAsList("sg_all_access.users").get(0), "nagilum");
+		Assert.assertEquals(settings.getAsList("sg_role_starfleet_library.backendroles").get(0), "starfleet*");
+		Assert.assertEquals(settings.getAsList("sg_zdummy_all.users").get(0), "bug108");
 		
 		
 		// Deprecated get configuration API, acessible for sarek
@@ -104,10 +104,10 @@ public class RoleBasedAccessTest extends AbstractRestApiUnitTest {
 		response = rh.executeGetRequest("_searchguard/api/configuration/actiongroups", encodeBasicHeader("sarek", "sarek"));
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-		Assert.assertEquals(settings.get("ALL.0"), "indices:*");
-		Assert.assertEquals(settings.get("CLUSTER_MONITOR.0"), "cluster:monitor/*");
+		Assert.assertEquals(settings.getAsList("ALL").get(0), "indices:*");
+		Assert.assertEquals(settings.getAsList("CLUSTER_MONITOR").get(0), "cluster:monitor/*");
 		// new format for action groups
-		Assert.assertEquals(settings.get("CRUD.permissions.0"), "READ");
+		Assert.assertEquals(settings.getAsList("CRUD.permissions").get(0), "READ");
 		
 		// --- Forbidden ---
 				
@@ -172,7 +172,7 @@ public class RoleBasedAccessTest extends AbstractRestApiUnitTest {
 		response = rh.executeGetRequest("/_searchguard/api/roles/sg_role_starfleet_captains", encodeBasicHeader("worf", "worf"));
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-		Assert.assertEquals(settings.get("sg_role_starfleet_captains.cluster.0"), "cluster:monitor*");
+		Assert.assertEquals(settings.getAsList("sg_role_starfleet_captains.cluster").get(0), "cluster:monitor*");
 
 		// Worf, has access to roles API, able to delete 
 		response = rh.executeDeleteRequest("/_searchguard/api/roles/sg_role_starfleet_captains", encodeBasicHeader("worf", "worf"));
@@ -209,7 +209,7 @@ public class RoleBasedAccessTest extends AbstractRestApiUnitTest {
 		response = rh.executeGetRequest("/_searchguard/api/roles/sg_role_starfleet_captains", encodeBasicHeader("worf", "worf"));
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-		Assert.assertEquals(settings.get("sg_role_starfleet_captains.indices.hulla.dulla.0"), "blafasel");
+		Assert.assertEquals(settings.getAsList("sg_role_starfleet_captains.indices.hulla.dulla").get(0), "blafasel");
 
 		// Try the same, but now with admin certificate
 		rh.sendHTTPClientCertificate = true;

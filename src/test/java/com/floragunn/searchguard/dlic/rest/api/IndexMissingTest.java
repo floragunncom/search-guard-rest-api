@@ -89,7 +89,7 @@ public class IndexMissingTest extends AbstractRestApiUnitTest {
 		response = rh.executeGetRequest("_searchguard/api/configuration/roles");
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		Assert.assertEquals("CLUSTER_ALL", settings.get("sg_admin.cluster.0"));
+		Assert.assertEquals("CLUSTER_ALL", settings.getAsList("sg_admin.cluster").get(0));
 
 	}
 }

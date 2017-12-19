@@ -18,13 +18,13 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -45,7 +45,9 @@ import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
@@ -64,6 +66,7 @@ import com.floragunn.searchguard.auditlog.AuditLog;
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.IndexBaseConfigurationRepository;
 import com.floragunn.searchguard.configuration.PrivilegesEvaluator;
+import com.floragunn.searchguard.dlic.rest.support.Utils;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator.ErrorType;
 import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
@@ -149,13 +152,17 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			return forbidden("Resource '"+ name +"' is read-only.");
 		}
 		
-		Settings.Builder existing = Settings.builder().put(existingAsSettings);
-		
-		Map<String, String> removedEntries = removeKeysStartingWith(existing, name + ".");
-		boolean modified = !removedEntries.isEmpty();
+		final Map<String, Object> con = 
+                new HashMap<>(Utils.convertJsonToxToStructuredMap(Settings.builder().put(existingAsSettings).build()))
+                .entrySet()
+                .stream()
+                .filter(f->f.getKey() != null && !f.getKey().equals(name)) //remove keys
+                .collect(Collectors.toMap(p -> p.getKey(), p -> p.getValue()));
+
+		boolean modified = !con.isEmpty();
 
 		if (modified) {
-			save(client, request, getConfigName(), existing);
+			save(client, request, getConfigName(), Utils.convertStructuredMapToBytes(con));
 			return successResponse("'" + name + "' deleted.", getConfigName());
 		} else {
 			return notFound(getResourceName() + " " + name + " not found.");
@@ -179,17 +186,24 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			return forbidden("Resource '"+ name +"' is read-only.");
 		}
 		
-		Settings.Builder existing = Settings.builder().put(existingAsSettings);
-		
 		if (log.isTraceEnabled()) {
 			log.trace(additionalSettingsBuilder.build());
 		}
-
-		Map<String, String> removedEntries = removeKeysStartingWith(existing, name + ".");
-		boolean existed = !removedEntries.isEmpty();
-
-		existing.put(prependValueToEachKey(additionalSettingsBuilder.build(), name + "."));
-		save(client, request, getConfigName(), existing);
+		
+		final Map<String, Object> con = 
+                new HashMap<>(Utils.convertJsonToxToStructuredMap(Settings.builder().put(existingAsSettings).build()))
+                .entrySet()
+                .stream()
+                .filter(f->f.getKey() != null && !f.getKey().equals(name)) //remove key
+                .collect(Collectors.toMap(p -> p.getKey(), p -> p.getValue()));
+		
+		boolean existed = !con.isEmpty();
+		
+		for(String k: additionalSettingsBuilder.keys()) {
+		    con.put(name + "."+k, additionalSettingsBuilder.get(k));
+		}
+		
+		save(client, request, getConfigName(), Utils.convertStructuredMapToBytes(con));
 		if (existed) {
 			return successResponse("'" + name + "' updated.", getConfigName());
 		} else {
@@ -214,18 +228,24 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			return new Tuple<String[], RestResponse>(new String[0],
 					new BytesRestResponse(RestStatus.OK, convertToJson(configurationSettings)));
 		}
+		
+		System.out.println(Utils.convertJsonToxToStructuredMap(Settings.builder().put(configurationSettings).build()));
 
-		final Settings.Builder configuration = Settings.builder().put(configurationSettings);
+		final Map<String, Object> con = 
+		        new HashMap<>(Utils.convertJsonToxToStructuredMap(Settings.builder().put(configurationSettings).build()))
+		        .entrySet()
+		        .stream()
+		        .filter(f->f.getKey() != null && f.getKey().equals(resourcename)) //copy keys
+		        .collect(Collectors.toMap(p -> p.getKey(), p -> p.getValue()));
+		
+		System.out.println(con);
 
-		final Settings.Builder requestedConfiguration = copyKeysStartingWith(configuration,
-				resourcename + ".");
-
-		if (requestedConfiguration.keys().size() == 0) {
+		if (con.size() == 0) {
 			return notFound("Resource '" + resourcename + "' not found.");
 		}
 
 		return new Tuple<String[], RestResponse>(new String[0],
-				new BytesRestResponse(RestStatus.OK, convertToJson(requestedConfiguration.build())));
+				new BytesRestResponse(RestStatus.OK, XContentHelper.convertToJson(Utils.convertStructuredMapToBytes(con), false, false, XContentType.JSON)));
 	}
 
 	protected final Settings.Builder load(final String config) {
@@ -306,9 +326,14 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		//
 		// return cs.state().metaData().hasConcreteIndex(this.searchguardIndex);
 	}
+	
+	protected void save(final Client client, final RestRequest request, final String config,
+            final Settings.Builder settings) throws Throwable {
+	    save(client, request, config, toSource(settings));
+	}
 
 	protected void save(final Client client, final RestRequest request, final String config,
-			final Settings.Builder settings) throws Throwable {
+			final BytesReference bytesRef) throws Throwable {
 		final Semaphore sem = new Semaphore(0);
 		final List<Throwable> exception = new ArrayList<Throwable>(1);
 		final IndexRequest ir = new IndexRequest(this.searchguardIndex);
@@ -321,7 +346,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			id = "0";
 		}
 
-		client.index(ir.type(type).id(id).setRefreshPolicy(RefreshPolicy.IMMEDIATE).source(config, toSource(settings)),
+		client.index(ir.type(type).id(id).setRefreshPolicy(RefreshPolicy.IMMEDIATE).source(config, bytesRef),
 				new ActionListener<IndexResponse>() {
 
 					@Override
@@ -483,55 +508,6 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		}
 
 		return success;
-	}
-
-	protected Settings.Builder copyKeysStartingWith(final Settings.Builder builder, final String startWith) {
-		if (builder == null || startWith == null || startWith.isEmpty()) {
-			return Settings.builder();
-		}
-
-		Settings.Builder copiedValues = Settings.builder();
-		for (final String key : new HashSet<String>(builder.keys())) {
-			if (key != null && key.startsWith(startWith)) {
-				copiedValues.put(key, builder.get(key));
-			}
-		}
-		return copiedValues;
-	}
-
-	protected Map<String, String> removeKeysStartingWith(final Settings.Builder builder, final String startWith) {
-		if (builder == null || startWith == null || startWith.isEmpty()) {
-			return Collections.emptyMap();
-		}
-		
-		Map<String, String> removedEntries = new HashMap<>();
-		
-		for (final String key : new HashSet<String>(builder.keys())) {
-			if (key != null && key.startsWith(startWith)) {
-				String value = builder.remove(key);
-				if (value != null) {
-				    removedEntries.put(key, value);
-				}
-
-			}
-		}
-		return removedEntries;
-	}
-
-	protected Settings prependValueToEachKey(final Settings settings, final String prepend) {
-		if (settings == null || settings.isEmpty() || prepend == null || prepend.isEmpty()) {
-			return Settings.EMPTY;
-		}
-
-		final Settings.Builder copy = Settings.builder();
-
-		for (final String key : new HashSet<String>(settings.keySet())) {
-			if (key != null) {
-				copy.put(prepend + key, settings.get(key));
-			}
-		}
-
-		return copy.build();
 	}
 
 	protected Map<String, String> removeLeadingValueFromEachKey(final Map<String, String> map, final String remove) {

@@ -48,7 +48,7 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 
 		// GET, user admin, exists
 		response = rh.executeGetRequest("/_searchguard/api/user/admin", new Header[0]);
-		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+		Assert.assertEquals(response.getBody(), HttpStatus.SC_OK, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(1, settings.size());
 		Assert.assertEquals("$2a$12$VcCDgh2NDk07JGN0rjGbM.Ad41qVR/YFJcgHp0UGns5JDymv..TOG",

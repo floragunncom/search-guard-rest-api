@@ -50,10 +50,10 @@ public class RolesMappingApiTest extends AbstractRestApiUnitTest {
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(5, settings.size());
-		Assert.assertEquals("starfleet", settings.get("sg_role_starfleet.backendroles.0"));
-		Assert.assertEquals("captains", settings.get("sg_role_starfleet.backendroles.1"));
-		Assert.assertEquals("*.starfleetintranet.com", settings.get("sg_role_starfleet.hosts.0"));
-		Assert.assertEquals("nagilum", settings.get("sg_role_starfleet.users.0"));
+		Assert.assertEquals("starfleet", settings.getAsList("sg_role_starfleet.backendroles").get(0));
+		Assert.assertEquals("captains", settings.getAsList("sg_role_starfleet.backendroles").get(1));
+		Assert.assertEquals("*.starfleetintranet.com", settings.getAsList("sg_role_starfleet.hosts").get(0));
+		Assert.assertEquals("nagilum", settings.getAsList("sg_role_starfleet.users").get(0));
 
 		// GET, rolesmapping does not exist
 		response = rh.executeGetRequest("/_searchguard/api/rolesmapping/nothinghthere", new Header[0]);

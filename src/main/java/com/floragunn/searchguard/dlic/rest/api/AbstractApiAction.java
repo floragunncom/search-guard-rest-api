@@ -229,8 +229,6 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 					new BytesRestResponse(RestStatus.OK, convertToJson(configurationSettings)));
 		}
 		
-		System.out.println(Utils.convertJsonToxToStructuredMap(Settings.builder().put(configurationSettings).build()));
-
 		final Map<String, Object> con = 
 		        new HashMap<>(Utils.convertJsonToxToStructuredMap(Settings.builder().put(configurationSettings).build()))
 		        .entrySet()
@@ -238,8 +236,6 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		        .filter(f->f.getKey() != null && f.getKey().equals(resourcename)) //copy keys
 		        .collect(Collectors.toMap(p -> p.getKey(), p -> p.getValue()));
 		
-		System.out.println(con);
-
 		if (con.size() == 0) {
 			return notFound("Resource '" + resourcename + "' not found.");
 		}

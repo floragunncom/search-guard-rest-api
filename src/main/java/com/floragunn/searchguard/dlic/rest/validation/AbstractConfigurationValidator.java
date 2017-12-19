@@ -28,7 +28,6 @@ import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentHelper;
@@ -234,10 +233,11 @@ public abstract class AbstractConfigurationValidator {
 		if (ref == null || ref.length() == 0) {
 			return Settings.builder();
 		}
-
+		
 		try {
-		    return Settings.builder().put(Settings.fromXContent(XContentHelper.createParser(NamedXContentRegistry.EMPTY, ref, XContentType.YAML)));
-		} catch (final IOException e) {
+		    return Settings.builder().loadFromSource(ref.utf8ToString(), XContentType.JSON);
+		} catch (final Exception e) {
+		    e.printStackTrace();
 			throw ExceptionsHelper.convertToElastic(e);
 		}
 	}

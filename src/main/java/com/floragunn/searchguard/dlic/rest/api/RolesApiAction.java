@@ -1,7 +1,5 @@
-package com.floragunn.searchguard.dlic.rest.api;
-
 /*
- * Copyright 2016 by floragunn GmbH - All rights reserved
+ * Copyright 2016-2017 by floragunn GmbH - All rights reserved
  * 
  *
  * Unless required by applicable law or agreed to in writing, software
@@ -13,6 +11,8 @@ package com.floragunn.searchguard.dlic.rest.api;
  * from https://floragunn.com
  * 
  */
+
+package com.floragunn.searchguard.dlic.rest.api;
 
 import java.nio.file.Path;
 

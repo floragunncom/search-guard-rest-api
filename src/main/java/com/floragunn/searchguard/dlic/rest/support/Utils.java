@@ -36,7 +36,7 @@ public class Utils {
             final BytesReference bytes = XContentHelper.toXContent(jsonContent, XContentType.JSON, false);
             disabledEndpointsSettings = XContentHelper.convertToMap(bytes, false, XContentType.JSON).v2();
         } catch (IOException e1) {
-            ExceptionsHelper.convertToElastic(e1);
+            throw ExceptionsHelper.convertToElastic(e1);
         }
         
         return disabledEndpointsSettings;
@@ -50,21 +50,4 @@ public class Utils {
         }
     }
     
-    /*public static Map<String, String> convertJsonToxToFlatMap(ToXContent jsonContent) {
-        
-        
-        XContentBuilder b = null;
-        b.map(values)
-        
-        try (XContentParser parser = JsonXContent.jsonXContent.createParser(NamedXContentRegistry.EMPTY, 
-                XContentHelper.toXContent(jsonContent, XContentType.JSON, false))) {
-            return parser.mapStrings();
-        } catch (IOException e) {
-            throw new ElasticsearchParseException("Failed to parse content to map", e);
-        }
-        
-        
-        
-    }*/
-
 }

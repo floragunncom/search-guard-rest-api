@@ -14,6 +14,8 @@
 
 package com.floragunn.searchguard.dlic.rest.api;
 
+import java.util.List;
+
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
 import org.elasticsearch.common.settings.Settings;
@@ -211,30 +213,28 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		// check read access to starfleet index and ships type, must fail
 		checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 0);
 		
-		// TODO: Multiple doctypes not allowed anymor
 		// overwrite user picard, and give him role "starfleet".
 		addUserWithPassword("picard", "picard", new String[] { "starfleet" }, HttpStatus.SC_OK);
+
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
-		//checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
 		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 1);
-		//checkWriteAccess(HttpStatus.SC_CREATED, "picard", "picard", "sf", "public", 1);
+
 
 		// overwrite user picard, and give him role "starfleet" plus "captains
 		addUserWithPassword("picard", "picard", new String[] { "starfleet", "captains" }, HttpStatus.SC_OK);
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
-//		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
-//		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 1);
 		checkWriteAccess(HttpStatus.SC_CREATED, "picard", "picard", "sf", "ships", 1);
-		// checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 1);
 
 		rh.sendHTTPClientCertificate = true;
 		response = rh.executeGetRequest("/_searchguard/api/user/picard", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		Assert.assertEquals(3, settings.size());
 		Assert.assertNotEquals(null, Strings.emptyToNull(settings.get("picard.hash")));
-		Assert.assertEquals("starfleet", settings.get("picard.roles.0").trim());
-		Assert.assertEquals("captains", settings.get("picard.roles.1").trim());
+		List<String> roles = settings.getAsList("picard.roles");
+		Assert.assertNotNull(roles);
+		Assert.assertEquals(2, roles.size());
+		Assert.assertTrue(roles.contains("starfleet"));
+		Assert.assertTrue(roles.contains("captains"));
 
 	}
 

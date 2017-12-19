@@ -49,7 +49,6 @@ public class RolesMappingApiTest extends AbstractRestApiUnitTest {
 		response = rh.executeGetRequest("/_searchguard/api/rolesmapping/sg_role_starfleet", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		Assert.assertEquals(5, settings.size());
 		Assert.assertEquals("starfleet", settings.getAsList("sg_role_starfleet.backendroles").get(0));
 		Assert.assertEquals("captains", settings.getAsList("sg_role_starfleet.backendroles").get(1));
 		Assert.assertEquals("*.starfleetintranet.com", settings.getAsList("sg_role_starfleet.hosts").get(0));

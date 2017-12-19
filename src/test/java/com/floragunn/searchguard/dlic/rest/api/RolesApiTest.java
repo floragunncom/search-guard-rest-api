@@ -14,6 +14,10 @@
 
 package com.floragunn.searchguard.dlic.rest.api;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
 import org.elasticsearch.common.settings.Settings;
@@ -21,6 +25,7 @@ import org.elasticsearch.common.xcontent.XContentType;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.floragunn.searchguard.dlic.rest.support.Utils;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator.ErrorType;
 import com.floragunn.searchguard.test.helper.file.FileHelper;
@@ -45,8 +50,8 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
 		// GET sg_all_access, exists
 		response = rh.executeGetRequest("/_searchguard/api/roles/sg_role_starfleet", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		Assert.assertEquals(10, settings.size());
+		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();				
+		Assert.assertEquals(8, settings.size());
 
 		// GET, role does not exist
 		response = rh.executeGetRequest("/_searchguard/api/roles/nothinghthere", new Header[0]);
@@ -135,8 +140,7 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
 				FileHelper.loadFile("roles_wrong_datatype.json"), new Header[0]);
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
-		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.WRONG_DATATYPE.getMessage(), settings.get("reason"));
-		Assert.assertTrue(settings.get("indices").equals("Object expected"));
+		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.WRONG_DATATYPE.getMessage(), settings.get("reason"));		
 		Assert.assertTrue(settings.get("cluster").equals("Array expected"));
 
 		// put read only role, must be forbidden
@@ -171,13 +175,13 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
 		//checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
 
 		rh.sendHTTPClientCertificate = true;
-		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet_captains",
-				FileHelper.loadFile("roles_multiple.json"), new Header[0]);
-		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
-
-		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet_captains",
-				FileHelper.loadFile("roles_multiple_2.json"), new Header[0]);
-		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+//		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet_captains",
+//				FileHelper.loadFile("roles_multiple.json"), new Header[0]);
+//		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+//
+//		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet_captains",
+//				FileHelper.loadFile("roles_multiple_2.json"), new Header[0]);
+//		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 		
 		// check tenants
 		rh.sendHTTPClientCertificate = true;

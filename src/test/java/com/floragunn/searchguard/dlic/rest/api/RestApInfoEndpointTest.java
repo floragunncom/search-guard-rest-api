@@ -39,12 +39,12 @@ public class RestApInfoEndpointTest extends AbstractRestApiUnitTest {
 		String enabled = (String) settings.get("has_api_access");
 		Assert.assertEquals("true", enabled);
 		// everything disabled for this user
-		Settings disabled = settings.getByPrefix("disabled_endpoints");
+		Settings disabled = settings.getByPrefix("disabled_endpoints.");
 
-		Assert.assertEquals(disabled.getByPrefix(Endpoint.CACHE.name()).size(), Method.values().length);
-		Assert.assertEquals(disabled.getByPrefix(Endpoint.LICENSE.name()).size(), Method.values().length);
-		Assert.assertEquals(disabled.getByPrefix(Endpoint.CONFIGURATION.name()).size(), Method.values().length);
-		Assert.assertEquals(disabled.getByPrefix(Endpoint.ROLESMAPPING.name()).size(), 2);
+		Assert.assertEquals(disabled.getAsList(Endpoint.CACHE.name()).size(), Method.values().length);
+		Assert.assertEquals(disabled.getAsList(Endpoint.LICENSE.name()).size(), Method.values().length);
+		Assert.assertEquals(disabled.getAsList(Endpoint.CONFIGURATION.name()).size(), Method.values().length);
+		Assert.assertEquals(disabled.getAsList(Endpoint.ROLESMAPPING.name()).size(), 2);
 
 		
 		tearDown();
@@ -64,7 +64,7 @@ public class RestApInfoEndpointTest extends AbstractRestApiUnitTest {
 		String enabled = (String) settings.get("has_api_access");
 		Assert.assertEquals("false", enabled);
 		// everything disabled for this user
-		Settings disabled = settings.getByPrefix("disabled_endpoints");
+		Settings disabled = settings.getByPrefix("disabled_endpoints.");
 		Assert.assertEquals(Endpoint.values().length, disabled.size());
 		tearDown();
 	}

@@ -1,18 +1,15 @@
 {
-  "indices": [
-    {
-      "ships": [
-        "READ"
-      ],
-      "public": [
-        "indices:*"
+  "indices": {
+    "sf": {
+      "*": [
+        "CRUD"
       ]
     },
-    {
+    "pub": {
       "*": [
-        "READ"
+        "CRUD"
       ]
     }
-  ],
+  },
   "cluster": 123
 }

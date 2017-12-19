@@ -98,17 +98,11 @@ public class InternalUsersApiAction extends AbstractApiAction {
 			additionalSettingsBuilder.put("hash", hash(plainTextPassword.toCharArray()));
 		}
 				
-		// first, remove any existing user
-		final Settings.Builder internaluser = load(ConfigConstants.CONFIGNAME_INTERNAL_USERS);
-		
-		final Map<String, Object> con = 
-                new HashMap<>(Utils.convertJsonToxToStructuredMap(internaluser.build()))
-                .entrySet()
-                .stream()
-                .filter(f->f.getKey() != null && !f.getKey().equals(username)) //remove keys
-                .collect(Collectors.toMap(p -> p.getKey(), p -> p.getValue()));
+		// check if user exists
+		final Settings.Builder internaluser = load(ConfigConstants.CONFIGNAME_INTERNAL_USERS);		
+		final Map<String, Object> config = Utils.convertJsonToxToStructuredMap(internaluser.build()); 
 
-		boolean userExisted = !con.isEmpty();
+		boolean userExisted = config.containsKey(username);
 
 		// when updating an existing user password hash can be blank, which means no changes
 		
@@ -120,21 +114,20 @@ public class InternalUsersApiAction extends AbstractApiAction {
 		// for existing users, hash is optional
 		if(userExisted && additionalSettingsBuilder.get("hash") == null) {
 			// sanity check, this should usually not happen
-			if (!con.containsKey(username+".hash")) {
+			@SuppressWarnings("unchecked")
+			Map<String, String> existingUserSettings = (Map<String, String>)config.get(username);
+			if (!existingUserSettings.containsKey("hash")) {
 				return internalErrorResponse("Existing user " + username+" has no password, and no new password or hash was specified");
 			}
-			additionalSettingsBuilder.put("hash", (String) con.get(username+".hash"));
+			additionalSettingsBuilder.put("hash", (String) existingUserSettings.get("hash"));
 		}
-		
+
+		config.remove(username);
+
 		// checks complete, create or update the user
-		//final Settings additionalSettings = additionalSettingsBuilder.build();
+		config.put(username, Utils.convertJsonToxToStructuredMap(additionalSettingsBuilder.build()));
 		
-		// add user with settings
-		for(String k: additionalSettingsBuilder.keys()) {
-            con.put(username + "."+k, additionalSettingsBuilder.get(k));
-        }
-		
-		save(client, request, ConfigConstants.CONFIGNAME_INTERNAL_USERS, Utils.convertStructuredMapToBytes(con));
+		save(client, request, ConfigConstants.CONFIGNAME_INTERNAL_USERS, Utils.convertStructuredMapToBytes(config));
 
 		if (userExisted) {
 			return successResponse("'" + username + "' updated", ConfigConstants.CONFIGNAME_INTERNAL_USERS);

@@ -14,9 +14,8 @@
 
 package com.floragunn.searchguard.dlic.rest.api;
 
-import java.util.Map;
-
 import org.apache.http.Header;
+import org.elasticsearch.common.settings.Settings;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -36,7 +35,7 @@ public class InvalidLicenseTest extends LicenseTest {
 		HttpResponse response = rh.executePutRequest("/_searchguard/api/license", createLicenseRequestBody(license), new Header[0]);
 		Assert.assertEquals(201, response.getStatusCode());
 		
-		 Map<String, String> settingsAsMap = getCurrentLicense();
+		 Settings settingsAsMap = getCurrentLicense();
 		 Assert.assertEquals(SearchGuardLicense.Type.SINGLE.name(), settingsAsMap.get("sg_license.type"));
 		 Assert.assertEquals("1", settingsAsMap.get("sg_license.allowed_node_count_per_cluster"));
 		 Assert.assertEquals(Boolean.FALSE.toString(), settingsAsMap.get("sg_license.is_valid"));

@@ -14,8 +14,6 @@
 
 package com.floragunn.searchguard.dlic.rest.api;
 
-import java.util.Map;
-
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
 import org.elasticsearch.common.settings.Settings;
@@ -51,12 +49,11 @@ public class RolesMappingApiTest extends AbstractRestApiUnitTest {
 		response = rh.executeGetRequest("/_searchguard/api/rolesmapping/sg_role_starfleet", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		Map<String, String> settingsAsMap = settings.getAsMap();
-		Assert.assertEquals(5, settingsAsMap.size());
-		Assert.assertEquals("starfleet", settingsAsMap.get("sg_role_starfleet.backendroles.0"));
-		Assert.assertEquals("captains", settingsAsMap.get("sg_role_starfleet.backendroles.1"));
-		Assert.assertEquals("*.starfleetintranet.com", settingsAsMap.get("sg_role_starfleet.hosts.0"));
-		Assert.assertEquals("nagilum", settingsAsMap.get("sg_role_starfleet.users.0"));
+		Assert.assertEquals(5, settings.size());
+		Assert.assertEquals("starfleet", settings.get("sg_role_starfleet.backendroles.0"));
+		Assert.assertEquals("captains", settings.get("sg_role_starfleet.backendroles.1"));
+		Assert.assertEquals("*.starfleetintranet.com", settings.get("sg_role_starfleet.hosts.0"));
+		Assert.assertEquals("nagilum", settings.get("sg_role_starfleet.users.0"));
 
 		// GET, rolesmapping does not exist
 		response = rh.executeGetRequest("/_searchguard/api/rolesmapping/nothinghthere", new Header[0]);

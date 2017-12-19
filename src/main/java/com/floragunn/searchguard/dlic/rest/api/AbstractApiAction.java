@@ -151,7 +151,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		
 		Settings.Builder existing = Settings.builder().put(existingAsSettings);
 		
-		Map<String, String> removedEntries = removeKeysStartingWith(existing.internalMap(), name + ".");
+		Map<String, String> removedEntries = removeKeysStartingWith(existing, name + ".");
 		boolean modified = !removedEntries.isEmpty();
 
 		if (modified) {
@@ -182,13 +182,13 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		Settings.Builder existing = Settings.builder().put(existingAsSettings);
 		
 		if (log.isTraceEnabled()) {
-			log.trace(additionalSettingsBuilder.build().getAsMap().toString());
+			log.trace(additionalSettingsBuilder.build());
 		}
 
-		Map<String, String> removedEntries = removeKeysStartingWith(existing.internalMap(), name + ".");
+		Map<String, String> removedEntries = removeKeysStartingWith(existing, name + ".");
 		boolean existed = !removedEntries.isEmpty();
 
-		existing.put(prependValueToEachKey(additionalSettingsBuilder.build().getAsMap(), name + "."));
+		existing.put(prependValueToEachKey(additionalSettingsBuilder.build(), name + "."));
 		save(client, request, getConfigName(), existing);
 		if (existed) {
 			return successResponse("'" + name + "' updated.", getConfigName());
@@ -217,10 +217,10 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 		final Settings.Builder configuration = Settings.builder().put(configurationSettings);
 
-		final Settings.Builder requestedConfiguration = copyKeysStartingWith(configuration.internalMap(),
+		final Settings.Builder requestedConfiguration = copyKeysStartingWith(configuration,
 				resourcename + ".");
 
-		if (requestedConfiguration.internalMap().size() == 0) {
+		if (requestedConfiguration.keys().size() == 0) {
 			return notFound("Resource '" + resourcename + "' not found.");
 		}
 
@@ -485,31 +485,32 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		return success;
 	}
 
-	protected Settings.Builder copyKeysStartingWith(final Map<String, String> map, final String startWith) {
-		if (map == null || map.isEmpty() || startWith == null || startWith.isEmpty()) {
+	protected Settings.Builder copyKeysStartingWith(final Settings.Builder builder, final String startWith) {
+		if (builder == null || startWith == null || startWith.isEmpty()) {
 			return Settings.builder();
 		}
 
-		Map<String, String> copiedValues = new HashMap<>();
-		for (final String key : new HashSet<String>(map.keySet())) {
+		Settings.Builder copiedValues = Settings.builder();
+		for (final String key : new HashSet<String>(builder.keys())) {
 			if (key != null && key.startsWith(startWith)) {
-				copiedValues.put(key, map.get(key));
+				copiedValues.put(key, builder.get(key));
 			}
 		}
-		return Settings.builder().put(copiedValues);
+		return copiedValues;
 	}
 
-	protected Map<String, String> removeKeysStartingWith(final Map<String, String> map, final String startWith) {
-		if (map == null || map.isEmpty() || startWith == null || startWith.isEmpty()) {
+	protected Map<String, String> removeKeysStartingWith(final Settings.Builder builder, final String startWith) {
+		if (builder == null || startWith == null || startWith.isEmpty()) {
 			return Collections.emptyMap();
 		}
+		
 		Map<String, String> removedEntries = new HashMap<>();
-
-		for (final String key : new HashSet<String>(map.keySet())) {
+		
+		for (final String key : new HashSet<String>(builder.keys())) {
 			if (key != null && key.startsWith(startWith)) {
-				String value = map.remove(key);
+				String value = builder.remove(key);
 				if (value != null) {
-					removedEntries.put(key, value);
+				    removedEntries.put(key, value);
 				}
 
 			}
@@ -517,20 +518,20 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		return removedEntries;
 	}
 
-	protected Map<String, String> prependValueToEachKey(final Map<String, String> map, final String prepend) {
-		if (map == null || map.isEmpty() || prepend == null || prepend.isEmpty()) {
-			return map;
+	protected Settings prependValueToEachKey(final Settings settings, final String prepend) {
+		if (settings == null || settings.isEmpty() || prepend == null || prepend.isEmpty()) {
+			return Settings.EMPTY;
 		}
 
-		final Map<String, String> copy = new HashMap<String, String>();
+		final Settings.Builder copy = Settings.builder();
 
-		for (final String key : new HashSet<String>(map.keySet())) {
+		for (final String key : new HashSet<String>(settings.keySet())) {
 			if (key != null) {
-				copy.put(prepend + key, map.get(key));
+				copy.put(prepend + key, settings.get(key));
 			}
 		}
 
-		return copy;
+		return copy.build();
 	}
 
 	protected Map<String, String> removeLeadingValueFromEachKey(final Map<String, String> map, final String remove) {

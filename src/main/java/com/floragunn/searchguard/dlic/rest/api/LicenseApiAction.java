@@ -16,9 +16,7 @@ package com.floragunn.searchguard.dlic.rest.api;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
@@ -164,8 +162,7 @@ public class LicenseApiAction extends AbstractApiAction {
 		final Settings.Builder existing = load(getConfigName());
 		
 		if (log.isTraceEnabled()) {
-			final Map<String, String> existingAsMap = new HashMap<String, String>(existing.build().getAsMap());
-			log.trace(existingAsMap.toString());	
+			log.trace(existing.build().toString());	
 		}
 		
 		// license already present?		

@@ -30,8 +30,12 @@ import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.elasticsearch.ExceptionsHelper;
+import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.TransportAddress;
+import org.elasticsearch.common.xcontent.XContentHelper;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestRequest.Method;
 import org.elasticsearch.threadpool.ThreadPool;
@@ -96,7 +100,7 @@ public class RestApiPrivilegesEvaluator {
 		this.allEndpoints = Collections.unmodifiableMap(allEndpoints);
 
 		// setup role based permissions
-		allowedRoles.addAll(Arrays.asList(settings.getAsArray(ConfigConstants.SEARCHGUARD_RESTAPI_ROLES_ENABLED)));
+		allowedRoles.addAll(settings.getAsList(ConfigConstants.SEARCHGUARD_RESTAPI_ROLES_ENABLED));
 
 		this.roleBasedAccessEnabled = !allowedRoles.isEmpty();
 
@@ -139,8 +143,15 @@ public class RestApiPrivilegesEvaluator {
 			return Collections.emptyMap();
 		}
 
-		Map<Endpoint, List<Method>> disabledEndpoints = new HashMap<Endpoint, List<Method>>();
-		Map<String, Object> disabledEndpointsSettings = settings.getAsStructuredMap();
+		final Map<Endpoint, List<Method>> disabledEndpoints = new HashMap<Endpoint, List<Method>>();
+		
+		Map<String, Object> disabledEndpointsSettings = null;
+        try {
+            final BytesReference bytes = XContentHelper.toXContent(settings, XContentType.JSON, false);
+            disabledEndpointsSettings = XContentHelper.convertToMap(bytes, false, XContentType.JSON).v2();
+        } catch (IOException e1) {
+            ExceptionsHelper.convertToElastic(e1);
+        }
 
 		for (Entry<String, Object> value : disabledEndpointsSettings.entrySet()) {
 			// key is the endpoint, see if it is a valid one

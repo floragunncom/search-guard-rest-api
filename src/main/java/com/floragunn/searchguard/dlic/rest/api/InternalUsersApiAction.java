@@ -98,7 +98,7 @@ public class InternalUsersApiAction extends AbstractApiAction {
 		// first, remove any existing user
 		final Settings.Builder internaluser = load(ConfigConstants.CONFIGNAME_INTERNAL_USERS);
 
-		Map<String, String> removedEntries = removeKeysStartingWith(internaluser.internalMap(), username + "."); 
+		Map<String, String> removedEntries = removeKeysStartingWith(internaluser, username + "."); 
 		boolean userExisted = !removedEntries.isEmpty();
 
 		// when updating an existing user password hash can be blank, which means no changes
@@ -121,7 +121,7 @@ public class InternalUsersApiAction extends AbstractApiAction {
 		final Settings additionalSettings = additionalSettingsBuilder.build();
 		
 		// add user with settings
-		internaluser.put(prependValueToEachKey(additionalSettings.getAsMap(), username + "."));
+		internaluser.put(prependValueToEachKey(additionalSettings, username + "."));
 		save(client, request, ConfigConstants.CONFIGNAME_INTERNAL_USERS, internaluser);
 
 		if (userExisted) {

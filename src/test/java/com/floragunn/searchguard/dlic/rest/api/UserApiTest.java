@@ -14,8 +14,6 @@
 
 package com.floragunn.searchguard.dlic.rest.api;
 
-import java.util.Map;
-
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
 import org.elasticsearch.common.settings.Settings;
@@ -44,7 +42,7 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 				.executeGetRequest("_searchguard/api/configuration/" + ConfigConstants.CONFIGNAME_INTERNAL_USERS);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		Assert.assertEquals(8, settings.getAsMap().size());
+		Assert.assertEquals(8, settings.size());
 
 		// --- GET
 
@@ -52,10 +50,9 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		response = rh.executeGetRequest("/_searchguard/api/user/admin", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		Map<String, String> settingsAsMap = settings.getAsMap();
-		Assert.assertEquals(1, settingsAsMap.size());
+		Assert.assertEquals(1, settings.size());
 		Assert.assertEquals("$2a$12$VcCDgh2NDk07JGN0rjGbM.Ad41qVR/YFJcgHp0UGns5JDymv..TOG",
-				settingsAsMap.get("admin.hash"));
+				settings.get("admin.hash"));
 
 		// GET, user does not exist
 		response = rh.executeGetRequest("/_searchguard/api/user/nothinghthere", new Header[0]);
@@ -163,7 +160,7 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		response = rh.executeGetRequest("/_searchguard/api/user/nagilum", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		Assert.assertTrue(settings.getAsMap().get("nagilum.hash").equals("$2a$12$n5nubfWATfQjSYHiWtUyeOxMIxFInUHOAx8VMmGmxFNPGpaBmeB.m"));
+		Assert.assertTrue(settings.get("nagilum.hash").equals("$2a$12$n5nubfWATfQjSYHiWtUyeOxMIxFInUHOAx8VMmGmxFNPGpaBmeB.m"));
 
 		
 		// ROLES
@@ -234,11 +231,10 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		response = rh.executeGetRequest("/_searchguard/api/user/picard", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		settingsAsMap = settings.getAsMap();
-		Assert.assertEquals(3, settingsAsMap.size());
-		Assert.assertNotEquals(null, Strings.emptyToNull(settingsAsMap.get("picard.hash")));
-		Assert.assertEquals("starfleet", settingsAsMap.get("picard.roles.0").trim());
-		Assert.assertEquals("captains", settingsAsMap.get("picard.roles.1").trim());
+		Assert.assertEquals(3, settings.size());
+		Assert.assertNotEquals(null, Strings.emptyToNull(settings.get("picard.hash")));
+		Assert.assertEquals("starfleet", settings.get("picard.roles.0").trim());
+		Assert.assertEquals("captains", settings.get("picard.roles.1").trim());
 
 	}
 

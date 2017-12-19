@@ -55,19 +55,19 @@ public class GetConfigurationApiTest extends AbstractRestApiUnitTest {
 		response = rh.executeGetRequest("_searchguard/api/configuration/roles");
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		Assert.assertEquals(settings.getAsArray("sg_all_access.cluster")[0], "cluster:*");
+		Assert.assertEquals(settings.getAsList("sg_all_access.cluster").get(0), "cluster:*");
 
 		// roles
 		response = rh.executeGetRequest("_searchguard/api/configuration/rolesmapping");
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		Assert.assertEquals(settings.getAsArray("sg_role_starfleet.backendroles")[0], "starfleet");
+		Assert.assertEquals(settings.getAsList("sg_role_starfleet.backendroles").get(0), "starfleet");
 
 		// action groups
 		response = rh.executeGetRequest("_searchguard/api/configuration/actiongroups");
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		Assert.assertEquals(settings.getAsArray("ALL")[0], "indices:*");
+		Assert.assertEquals(settings.getAsList("ALL").get(0), "indices:*");
 	}
 
 }

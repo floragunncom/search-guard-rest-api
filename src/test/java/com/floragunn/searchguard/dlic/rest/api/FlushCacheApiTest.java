@@ -13,8 +13,6 @@
  */
 package com.floragunn.searchguard.dlic.rest.api;
 
-import java.util.Map;
-
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
 import org.elasticsearch.common.settings.Settings;
@@ -39,29 +37,25 @@ public class FlushCacheApiTest extends AbstractRestApiUnitTest {
 		HttpResponse response = rh.executeGetRequest("/_searchguard/api/cache");
 		Assert.assertEquals(HttpStatus.SC_NOT_IMPLEMENTED, response.getStatusCode());
 		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		Map<String, String> settingsAsMap = settings.getAsMap();
-		Assert.assertEquals(settingsAsMap.get("message"), "Method GET not supported for this action.");
+		Assert.assertEquals(settings.get("message"), "Method GET not supported for this action.");
 
 		// PUT
 		response = rh.executePutRequest("/_searchguard/api/cache", "{}", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_NOT_IMPLEMENTED, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		settingsAsMap = settings.getAsMap();
-		Assert.assertEquals(settingsAsMap.get("message"), "Method PUT not supported for this action.");
+		Assert.assertEquals(settings.get("message"), "Method PUT not supported for this action.");
 
 		// POST
 		response = rh.executePostRequest("/_searchguard/api/cache", "{}", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_NOT_IMPLEMENTED, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		settingsAsMap = settings.getAsMap();
-		Assert.assertEquals(settingsAsMap.get("message"), "Method POST not supported for this action.");
+		Assert.assertEquals(settings.get("message"), "Method POST not supported for this action.");
 
 		// DELETE
 		response = rh.executeDeleteRequest("/_searchguard/api/cache", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		settingsAsMap = settings.getAsMap();
-		Assert.assertEquals(settingsAsMap.get("message"), "Cache flushed successfully.");
+		Assert.assertEquals(settings.get("message"), "Cache flushed successfully.");
 
 	}
 }

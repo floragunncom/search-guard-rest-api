@@ -14,8 +14,11 @@
 
 package com.floragunn.searchguard.dlic.rest.api;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
@@ -24,6 +27,10 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.plugins.Plugin;
 import org.junit.Assert;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.floragunn.searchguard.test.DynamicSgConfig;
 import com.floragunn.searchguard.test.SingleClusterTest;
 import com.floragunn.searchguard.test.helper.file.FileHelper;
@@ -114,7 +121,7 @@ public abstract class AbstractRestApiUnitTest extends SingleClusterTest {
 		rh.sendHTTPClientCertificate = true;
 		String payload = "{" + "\"password\": \"" + password + "\"," + "\"roles\": [";
 		for (int i = 0; i < roles.length; i++) {
-			payload += "\" " + roles[i] + " \"";
+			payload += "\"" + roles[i] + "\"";
 			if (i + 1 < roles.length) {
 				payload += ",";
 			}
@@ -202,27 +209,6 @@ public abstract class AbstractRestApiUnitTest extends SingleClusterTest {
 		rh.sendHTTPClientCertificate = sendHTTPClientCertificate;
 	}
 
-	/*
-	 * protected void setupSearchGuardIndex() { Settings tcSettings = Settings.builder() //.put("cluster.name", ClusterHelper.clustername)
-	 * .put(defaultNodeSettings(false)) .put("searchguard.ssl.transport.keystore_filepath",
-	 * FileHelper.getAbsoluteFilePathFromClassPath("kirk-keystore.jks")) .put(SSLConfigConstants.SEARCHGUARD_SSL_TRANSPORT_KEYSTORE_ALIAS,
-	 * "kirk").put("path.home", ".").build();
-	 * 
-	 * try (TransportClient tc = new TransportClientImpl(tcSettings,asCollection(Netty4Plugin.class, SearchGuardPlugin.class))) {
-	 * 
-	 * log.debug("Start transport client to init");
-	 * 
-	 * tc.addTransportAddress(new TransportAddress(new InetSocketAddress(clusterInfo.nodeHost, clusterInfo.nodePort)));
-	 * Assert.assertEquals(clusterInfo.numNodes, tc.admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().size());
-	 * 
-	 * tc.admin().indices().create(new CreateIndexRequest("searchguard")).actionGet();
-	 * 
-	 * 
-	 * }
-	 * 
-	 * }
-	 */
-
 	protected Settings defaultNodeSettings(boolean enableRestSSL) {
 		Settings.Builder builder = Settings.builder();
 
@@ -235,7 +221,13 @@ public abstract class AbstractRestApiUnitTest extends SingleClusterTest {
 		}
 		return builder.build();
 	}
-
+	
+	protected Map<String, String> jsonStringToMap(String json) throws JsonParseException, JsonMappingException, IOException {
+		ObjectMapper mapper = new ObjectMapper();		
+		TypeReference<HashMap<String, String>> typeRef = new TypeReference<HashMap<String, String>>() {};
+		return mapper.readValue(json, typeRef);
+	}
+	
 	protected static class TransportClientImpl extends TransportClient {
 
 		public TransportClientImpl(Settings settings, Collection<Class<? extends Plugin>> plugins) {

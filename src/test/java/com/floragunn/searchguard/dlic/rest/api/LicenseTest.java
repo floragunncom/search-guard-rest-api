@@ -16,8 +16,6 @@ package com.floragunn.searchguard.dlic.rest.api;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
@@ -34,7 +32,7 @@ public class LicenseTest extends AbstractRestApiUnitTest {
 
 	protected final static String CONFIG_LICENSE_KEY = "searchguard.dynamic.license";
 	protected final static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-	private Map<String, String> originalConfig;
+	private Settings originalConfig;
 	
 	// start dates
 	protected LocalDate expiredStartDate = LocalDate.of(2016, Month.JANUARY, 31);
@@ -60,10 +58,8 @@ public class LicenseTest extends AbstractRestApiUnitTest {
 		// Store conent as map for further user
 		originalConfig = getCurrentConfig();
 		
-		Map<String, String> currentConfig;
-		
 		// check license exists - has to be trial license
-		 Map<String, String> settingsAsMap = getCurrentLicense();
+		 Settings settingsAsMap = getCurrentLicense();
 		 Assert.assertEquals(SearchGuardLicense.Type.TRIAL.name(), settingsAsMap.get("sg_license.type"));
 		 Assert.assertEquals("unlimited", settingsAsMap.get("sg_license.allowed_node_count_per_cluster"));
 		 Assert.assertEquals("true", settingsAsMap.get("sg_license.is_valid"));
@@ -83,7 +79,7 @@ public class LicenseTest extends AbstractRestApiUnitTest {
 		checkCurrentLicenseProperties(SearchGuardLicense.Type.ACADEMIC, Boolean.TRUE, "unlimited", validStartDate, validExpiryDate);
 		
 		// invalid - we run 3 nodes, but license has only one node allowed
-		Map<String, String> result = uploadAndCheckInvalidLicense("single_valid_forever.txt", HttpStatus.SC_BAD_REQUEST);
+		Settings result = uploadAndCheckInvalidLicense("single_valid_forever.txt", HttpStatus.SC_BAD_REQUEST);
 		// Make sure license was rejected and old values are still in place
 		checkCurrentLicenseProperties(SearchGuardLicense.Type.ACADEMIC, Boolean.TRUE, "unlimited", validStartDate, validExpiryDate);
 		Assert.assertEquals("License invalid due to: Only 1 node(s) allowed but you run 3 node(s)", result.get("message"));
@@ -146,8 +142,8 @@ public class LicenseTest extends AbstractRestApiUnitTest {
 		return FileHelper.loadFile("license/" + filename);
 	}
 	
-	protected final Map<String, String> checkCurrentLicenseProperties(SearchGuardLicense.Type type, Boolean isValid, String nodeCount,LocalDate startDate, LocalDate expiryDate ) throws Exception {
-		 Map<String, String> settingsAsMap = getCurrentLicense();
+	protected final Settings checkCurrentLicenseProperties(SearchGuardLicense.Type type, Boolean isValid, String nodeCount,LocalDate startDate, LocalDate expiryDate ) throws Exception {
+	     Settings settingsAsMap = getCurrentLicense();
 		 Assert.assertEquals(type.name(), settingsAsMap.get("sg_license.type"));
 		 Assert.assertEquals(nodeCount, settingsAsMap.get("sg_license.allowed_node_count_per_cluster"));
 		 Assert.assertEquals(isValid.toString(), settingsAsMap.get("sg_license.is_valid"));
@@ -160,38 +156,38 @@ public class LicenseTest extends AbstractRestApiUnitTest {
 	 uploadAndCheckValidLicense(licenseFileName, HttpStatus.SC_OK);
 	}
 
-	protected final Map<String, String> uploadAndCheckInvalidLicense(String licenseFileName, int statusCode) throws Exception {
+	protected final Settings uploadAndCheckInvalidLicense(String licenseFileName, int statusCode) throws Exception {
 		String licenseKey = loadLicenseKey(licenseFileName);
 		HttpResponse response = rh.executePutRequest("/_searchguard/api/license", createLicenseRequestBody(licenseKey), new Header[0]);
 		Assert.assertEquals(statusCode, response.getStatusCode());
 		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		return settings.getAsMap();
+		return settings;
 	}
 
 	protected final void uploadAndCheckValidLicense(String licenseFileName, int statusCode) throws Exception {
 		String licenseKey = loadLicenseKey(licenseFileName);
 		HttpResponse response = rh.executePutRequest("/_searchguard/api/license", createLicenseRequestBody(licenseKey), new Header[0]);
 		Assert.assertEquals(statusCode, response.getStatusCode());
-		Map<String, String> config = getCurrentConfig();
-		Map<String, String> expectectConfig = new HashMap<String, String>(originalConfig);
+		Settings config = getCurrentConfig();
+		Settings.Builder expectectConfig = Settings.builder().put(originalConfig);
 		expectectConfig.put(CONFIG_LICENSE_KEY, licenseKey);
 		// Old config + license must equal newly stored config
-		Assert.assertEquals(expectectConfig, config); 
+		Assert.assertEquals(expectectConfig.build(), config); 
 	}
 	
-	protected final Map<String, String> getCurrentLicense() throws Exception {
+	protected final Settings getCurrentLicense() throws Exception {
 		HttpResponse response = rh.executeGetRequest("_searchguard/api/license");
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		return settings.getAsMap();
+		return settings;
 	}
 
-	protected final Map<String, String> getCurrentConfig() throws Exception {
+	protected final Settings getCurrentConfig() throws Exception {
 		HttpResponse response = rh.executeGetRequest("_searchguard/api/configuration/config");
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		// sanity
 		Assert.assertEquals(settings.getAsBoolean("searchguard.dynamic.authc.authentication_domain_basic_internal.enabled", false), true);
-		return settings.getAsMap();
+		return settings;
 	}
 }

@@ -18,13 +18,13 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -45,7 +45,9 @@ import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
@@ -64,6 +66,7 @@ import com.floragunn.searchguard.auditlog.AuditLog;
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.IndexBaseConfigurationRepository;
 import com.floragunn.searchguard.configuration.PrivilegesEvaluator;
+import com.floragunn.searchguard.dlic.rest.support.Utils;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator.ErrorType;
 import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
@@ -149,13 +152,12 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			return forbidden("Resource '"+ name +"' is read-only.");
 		}
 		
-		Settings.Builder existing = Settings.builder().put(existingAsSettings);
-		
-		Map<String, String> removedEntries = removeKeysStartingWith(existing.internalMap(), name + ".");
-		boolean modified = !removedEntries.isEmpty();
+		final Map<String, Object> config = Utils.convertJsonToxToStructuredMap(Settings.builder().put(existingAsSettings).build()); 
 
-		if (modified) {
-			save(client, request, getConfigName(), existing);
+		boolean resourceExisted = config.containsKey(name);
+		config.remove(name);
+		if (resourceExisted) {
+			save(client, request, getConfigName(), Utils.convertStructuredMapToBytes(config));
 			return successResponse("'" + name + "' deleted.", getConfigName());
 		} else {
 			return notFound(getResourceName() + " " + name + " not found.");
@@ -179,17 +181,17 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			return forbidden("Resource '"+ name +"' is read-only.");
 		}
 		
-		Settings.Builder existing = Settings.builder().put(existingAsSettings);
-		
 		if (log.isTraceEnabled()) {
-			log.trace(additionalSettingsBuilder.build().getAsMap().toString());
+			log.trace(additionalSettingsBuilder.build());
 		}
+		
+		final Map<String, Object> con = Utils.convertJsonToxToStructuredMap(existingAsSettings); 
+		
+		boolean existed = con.containsKey(name);
 
-		Map<String, String> removedEntries = removeKeysStartingWith(existing.internalMap(), name + ".");
-		boolean existed = !removedEntries.isEmpty();
-
-		existing.put(prependValueToEachKey(additionalSettingsBuilder.build().getAsMap(), name + "."));
-		save(client, request, getConfigName(), existing);
+		con.put(name, Utils.convertJsonToxToStructuredMap(additionalSettingsBuilder.build()));
+		
+		save(client, request, getConfigName(), Utils.convertStructuredMapToBytes(con));
 		if (existed) {
 			return successResponse("'" + name + "' updated.", getConfigName());
 		} else {
@@ -215,18 +217,20 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 					new BytesRestResponse(RestStatus.OK, convertToJson(configurationSettings)));
 		}
 
-		final Settings.Builder configuration = Settings.builder().put(configurationSettings);
+		final Map<String, Object> con = 
+		        new HashMap<>(Utils.convertJsonToxToStructuredMap(Settings.builder().put(configurationSettings).build()))
+		        .entrySet()
+		        .stream()
+		        .filter(f->f.getKey() != null && f.getKey().equals(resourcename)) //copy keys
+		        .collect(Collectors.toMap(p -> p.getKey(), p -> p.getValue()));
 
-		final Settings.Builder requestedConfiguration = copyKeysStartingWith(configuration.internalMap(),
-				resourcename + ".");
-
-		if (requestedConfiguration.internalMap().size() == 0) {
+		if (!con.containsKey(resourcename)) {
 			return notFound("Resource '" + resourcename + "' not found.");
 		}
-
 		return new Tuple<String[], RestResponse>(new String[0],
-				new BytesRestResponse(RestStatus.OK, convertToJson(requestedConfiguration.build())));
+				new BytesRestResponse(RestStatus.OK, XContentHelper.convertToJson(Utils.convertStructuredMapToBytes(con), false, false, XContentType.JSON)));
 	}
+
 
 	protected final Settings.Builder load(final String config) {
 		return Settings.builder().put(loadAsSettings(config));
@@ -238,77 +242,18 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
 	protected boolean ensureIndexExists(final Client client) {
 		if (!cs.state().metaData().hasConcreteIndex(this.searchguardIndex)) {
-			log.error("Search Guard index does not exist yet, try to create it.");
 			return false;
 		}
 		return true;
-		// TODO: Implement this.
-		//
-		// final Semaphore sem = new Semaphore(0);
-		// final List<Exception> exceptions = new LinkedList<>();
-		//
-		// client.index(new IndexRequest(searchguardIndex)
-		// .type("sg")
-		// .id("tattr")
-		// .setRefreshPolicy(RefreshPolicy.IMMEDIATE)
-		// .source("{\"val\": " + System.currentTimeMillis() + "}",
-		// XContentType.JSON), new ActionListener<IndexResponse>() {
-		//
-		// @Override
-		// public void onResponse(final IndexResponse response) {
-		// sem.release();
-		// if (logger.isDebugEnabled()) {
-		// logger.debug("Search Guard index successfully created.");
-		// }
-		// }
-		//
-		// @Override
-		// public void onFailure(final Exception e) {
-		// sem.release();
-		// exceptions.add(e);
-		// logger.error("Cannot create Search Guard index due to {}", e, e);
-		// }
-		// });
-		//
-		// try {
-		// if (!sem.tryAcquire(1, TimeUnit.MINUTES)) {
-		// // timeout
-		// logger.error("Cannot create Search Guard index due to a timeout.");
-		// return false;
-		// }
-		//
-		// if (exceptions.size() > 0) {
-		// return false;
-		// }
-		// } catch (InterruptedException e) {
-		// Thread.currentThread().interrupt();
-		// return false;
-		// }
-		// }
-		//
-		// client.index(new IndexRequest(searchguardIndex)
-		// .type("sg")
-		// .id(ConfigConstants.CONFIGNAME_ROLES)
-		// .setRefreshPolicy(RefreshPolicy.IMMEDIATE)
-		// .source("{}", XContentType.JSON), new ActionListener<IndexResponse>()
-		// {
-		//
-		// @Override
-		// public void onResponse(final IndexResponse response) {
-		// logger.info(response.status());
-		// }
-		//
-		// @Override
-		// public void onFailure(final Exception e) {
-		// logger.error(e);
-		// }
-		// });
-		//
-		// return cs.state().metaData().hasConcreteIndex(this.searchguardIndex);
+	}
+	
+	protected void save(final Client client, final RestRequest request, final String config,
+            final Settings.Builder settings) throws Throwable {
+	    save(client, request, config, toSource(settings));
 	}
 
 	protected void save(final Client client, final RestRequest request, final String config,
-			final Settings.Builder settings) throws Throwable {
+			final BytesReference bytesRef) throws Throwable {
 		final Semaphore sem = new Semaphore(0);
 		final List<Throwable> exception = new ArrayList<Throwable>(1);
 		final IndexRequest ir = new IndexRequest(this.searchguardIndex);
@@ -321,7 +266,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			id = "0";
 		}
 
-		client.index(ir.type(type).id(id).setRefreshPolicy(RefreshPolicy.IMMEDIATE).source(config, toSource(settings)),
+		client.index(ir.type(type).id(id).setRefreshPolicy(RefreshPolicy.IMMEDIATE).source(config, bytesRef),
 				new ActionListener<IndexResponse>() {
 
 					@Override
@@ -483,83 +428,6 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		}
 
 		return success;
-	}
-
-	protected Settings.Builder copyKeysStartingWith(final Map<String, String> map, final String startWith) {
-		if (map == null || map.isEmpty() || startWith == null || startWith.isEmpty()) {
-			return Settings.builder();
-		}
-
-		Map<String, String> copiedValues = new HashMap<>();
-		for (final String key : new HashSet<String>(map.keySet())) {
-			if (key != null && key.startsWith(startWith)) {
-				copiedValues.put(key, map.get(key));
-			}
-		}
-		return Settings.builder().put(copiedValues);
-	}
-
-	protected Map<String, String> removeKeysStartingWith(final Map<String, String> map, final String startWith) {
-		if (map == null || map.isEmpty() || startWith == null || startWith.isEmpty()) {
-			return Collections.emptyMap();
-		}
-		Map<String, String> removedEntries = new HashMap<>();
-
-		for (final String key : new HashSet<String>(map.keySet())) {
-			if (key != null && key.startsWith(startWith)) {
-				String value = map.remove(key);
-				if (value != null) {
-					removedEntries.put(key, value);
-				}
-
-			}
-		}
-		return removedEntries;
-	}
-
-	protected Map<String, String> prependValueToEachKey(final Map<String, String> map, final String prepend) {
-		if (map == null || map.isEmpty() || prepend == null || prepend.isEmpty()) {
-			return map;
-		}
-
-		final Map<String, String> copy = new HashMap<String, String>();
-
-		for (final String key : new HashSet<String>(map.keySet())) {
-			if (key != null) {
-				copy.put(prepend + key, map.get(key));
-			}
-		}
-
-		return copy;
-	}
-
-	protected Map<String, String> removeLeadingValueFromEachKey(final Map<String, String> map, final String remove) {
-		if (map == null || map.isEmpty() || remove == null || remove.isEmpty()) {
-			return map;
-		}
-
-		final Map<String, String> copy = new HashMap<String, String>();
-
-		for (final String key : new HashSet<String>(map.keySet())) {
-			if (key != null) {
-				copy.put(key.replaceAll(remove, ""), map.get(key));
-			}
-		}
-
-		return copy;
-	}
-
-	protected static String convertToYaml(BytesReference bytes, boolean prettyPrint) throws IOException {
-		try (XContentParser parser = JsonXContent.jsonXContent.createParser(NamedXContentRegistry.EMPTY,
-				bytes.streamInput())) {
-			parser.nextToken();
-			XContentBuilder builder = XContentFactory.yamlBuilder();
-			if (prettyPrint) {
-				builder.prettyPrint();
-			}
-			builder.copyCurrentStructure(parser);
-			return builder.string();
-		}
 	}
 
 	protected static XContentBuilder convertToJson(Settings settings) throws IOException {

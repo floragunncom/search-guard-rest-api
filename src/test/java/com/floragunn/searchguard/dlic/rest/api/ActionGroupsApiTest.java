@@ -14,7 +14,7 @@
 
 package com.floragunn.searchguard.dlic.rest.api;
 
-import java.util.Map;
+import java.util.List;
 
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
@@ -42,9 +42,12 @@ public class ActionGroupsApiTest extends AbstractRestApiUnitTest {
 		// GET, actiongroup exists
 		HttpResponse response = rh.executeGetRequest("/_searchguard/api/actiongroup/CRUD", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		Map<String, String> settingsAsMap = settings.getAsMap();
-		Assert.assertEquals(2, settingsAsMap.size());
+		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();		
+		List<String> permissions = settings.getAsList("CRUD.permissions");
+		Assert.assertNotNull(permissions);
+		Assert.assertEquals(2, permissions.size());
+		Assert.assertTrue(permissions.contains("READ"));
+		Assert.assertTrue(permissions.contains("WRITE"));
 
 		// GET, actiongroup does not exist
 		response = rh.executeGetRequest("/_searchguard/api/actiongroup/nothinghthere", new Header[0]);

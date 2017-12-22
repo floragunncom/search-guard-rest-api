@@ -14,7 +14,9 @@
 
 package com.floragunn.searchguard.dlic.rest.api;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
@@ -23,6 +25,7 @@ import org.elasticsearch.common.xcontent.XContentType;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.floragunn.searchguard.dlic.rest.support.Utils;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator.ErrorType;
 import com.floragunn.searchguard.test.helper.file.FileHelper;
@@ -47,9 +50,8 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
 		// GET sg_all_access, exists
 		response = rh.executeGetRequest("/_searchguard/api/roles/sg_role_starfleet", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		Map<String, String> settingsAsMap = settings.getAsMap();
-		Assert.assertEquals(10, settingsAsMap.size());
+		Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();				
+		Assert.assertEquals(8, settings.size());
 
 		// GET, role does not exist
 		response = rh.executeGetRequest("/_searchguard/api/roles/nothinghthere", new Header[0]);
@@ -138,8 +140,7 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
 				FileHelper.loadFile("roles_wrong_datatype.json"), new Header[0]);
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
-		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.WRONG_DATATYPE.getMessage(), settings.get("reason"));
-		Assert.assertTrue(settings.get("indices").equals("Object expected"));
+		Assert.assertEquals(AbstractConfigurationValidator.ErrorType.WRONG_DATATYPE.getMessage(), settings.get("reason"));		
 		Assert.assertTrue(settings.get("cluster").equals("Array expected"));
 
 		// put read only role, must be forbidden
@@ -174,6 +175,11 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
 		//checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
 
 		rh.sendHTTPClientCertificate = true;
+        response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet_captains",
+                FileHelper.loadFile("roles_complete_invalid.json"), new Header[0]);
+        Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+		
+		rh.sendHTTPClientCertificate = true;
 		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet_captains",
 				FileHelper.loadFile("roles_multiple.json"), new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
@@ -188,62 +194,55 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
 				FileHelper.loadFile("roles_captains_tenants.json"), new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		settingsAsMap = settings.getAsMap();
-		Assert.assertEquals(2, settingsAsMap.size());
-		Assert.assertEquals(settingsAsMap.get("status"), "OK");
+		Assert.assertEquals(2, settings.size());
+		Assert.assertEquals(settings.get("status"), "OK");
 		
 		
 		response = rh.executeGetRequest("/_searchguard/api/roles/sg_role_starfleet_captains", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		settingsAsMap = settings.getAsMap();
-		Assert.assertEquals(5, settingsAsMap.size());
-		Assert.assertEquals(settingsAsMap.get("sg_role_starfleet_captains.tenants.tenant1"), "RO");
-		Assert.assertEquals(settingsAsMap.get("sg_role_starfleet_captains.tenants.tenant2"), "RW");
+		Assert.assertEquals(5, settings.size());
+		Assert.assertEquals(settings.get("sg_role_starfleet_captains.tenants.tenant1"), "RO");
+		Assert.assertEquals(settings.get("sg_role_starfleet_captains.tenants.tenant2"), "RW");
 
 		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet_captains",
 				FileHelper.loadFile("roles_captains_tenants2.json"), new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		settingsAsMap = settings.getAsMap();
-		Assert.assertEquals(2, settingsAsMap.size());
-		Assert.assertEquals(settingsAsMap.get("status"), "OK");
+		Assert.assertEquals(2, settings.size());
+		Assert.assertEquals(settings.get("status"), "OK");
 
 		response = rh.executeGetRequest("/_searchguard/api/roles/sg_role_starfleet_captains", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		settingsAsMap = settings.getAsMap();
-		Assert.assertEquals(7, settingsAsMap.size());
-		Assert.assertEquals(settingsAsMap.get("sg_role_starfleet_captains.tenants.tenant1"), "RO");
-		Assert.assertEquals(settingsAsMap.get("sg_role_starfleet_captains.tenants.tenant2"), "RW");
-		Assert.assertEquals(settingsAsMap.get("sg_role_starfleet_captains.tenants.tenant3"), "RO");
-		Assert.assertEquals(settingsAsMap.get("sg_role_starfleet_captains.tenants.tenant4"), "RW");
+		Assert.assertEquals(7, settings.size());
+		Assert.assertEquals(settings.get("sg_role_starfleet_captains.tenants.tenant1"), "RO");
+		Assert.assertEquals(settings.get("sg_role_starfleet_captains.tenants.tenant2"), "RW");
+		Assert.assertEquals(settings.get("sg_role_starfleet_captains.tenants.tenant3"), "RO");
+		Assert.assertEquals(settings.get("sg_role_starfleet_captains.tenants.tenant4"), "RW");
 		
 		// remove tenants from role
 		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet_captains",
 				FileHelper.loadFile("roles_captains_no_tenants.json"), new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		settingsAsMap = settings.getAsMap();
-		Assert.assertEquals(2, settingsAsMap.size());
-		Assert.assertEquals(settingsAsMap.get("status"), "OK");
+		Assert.assertEquals(2, settings.size());
+		Assert.assertEquals(settings.get("status"), "OK");
 
 		response = rh.executeGetRequest("/_searchguard/api/roles/sg_role_starfleet_captains", new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		settingsAsMap = settings.getAsMap();
-		Assert.assertEquals(3, settingsAsMap.size());	
-		Assert.assertNull(settingsAsMap.get("sg_role_starfleet_captains.tenants.tenant1"));
-		Assert.assertNull(settingsAsMap.get("sg_role_starfleet_captains.tenants.tenant2"));
-		Assert.assertNull(settingsAsMap.get("sg_role_starfleet_captains.tenants.tenant3"));
-		Assert.assertNull(settingsAsMap.get("sg_role_starfleet_captains.tenants.tenant4"));
+		Assert.assertEquals(3, settings.size());	
+		Assert.assertNull(settings.get("sg_role_starfleet_captains.tenants.tenant1"));
+		Assert.assertNull(settings.get("sg_role_starfleet_captains.tenants.tenant2"));
+		Assert.assertNull(settings.get("sg_role_starfleet_captains.tenants.tenant3"));
+		Assert.assertNull(settings.get("sg_role_starfleet_captains.tenants.tenant4"));
 
 		response = rh.executePutRequest("/_searchguard/api/roles/sg_role_starfleet_captains",
 				FileHelper.loadFile("roles_captains_tenants_malformed.json"), new Header[0]);
 		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-		settingsAsMap = settings.getAsMap();
-		Assert.assertEquals(settingsAsMap.get("status"), "error");
-		Assert.assertEquals(settingsAsMap.get("reason"), ErrorType.INVALID_CONFIGURATION.getMessage());
+		Assert.assertEquals(settings.get("status"), "error");
+		Assert.assertEquals(settings.get("reason"), ErrorType.INVALID_CONFIGURATION.getMessage());
 	}
 }

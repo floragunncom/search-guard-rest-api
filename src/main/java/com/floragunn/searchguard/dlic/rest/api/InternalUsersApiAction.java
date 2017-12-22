@@ -17,8 +17,10 @@ package com.floragunn.searchguard.dlic.rest.api;
 import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.bouncycastle.crypto.generators.OpenBSDBCrypt;
 import org.elasticsearch.client.Client;
@@ -37,6 +39,7 @@ import com.floragunn.searchguard.auditlog.AuditLog;
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.IndexBaseConfigurationRepository;
 import com.floragunn.searchguard.configuration.PrivilegesEvaluator;
+import com.floragunn.searchguard.dlic.rest.support.Utils;
 import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator;
 import com.floragunn.searchguard.dlic.rest.validation.InternalUsersValidator;
 import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
@@ -95,11 +98,11 @@ public class InternalUsersApiAction extends AbstractApiAction {
 			additionalSettingsBuilder.put("hash", hash(plainTextPassword.toCharArray()));
 		}
 				
-		// first, remove any existing user
-		final Settings.Builder internaluser = load(ConfigConstants.CONFIGNAME_INTERNAL_USERS);
+		// check if user exists
+		final Settings.Builder internaluser = load(ConfigConstants.CONFIGNAME_INTERNAL_USERS);		
+		final Map<String, Object> config = Utils.convertJsonToxToStructuredMap(internaluser.build()); 
 
-		Map<String, String> removedEntries = removeKeysStartingWith(internaluser.internalMap(), username + "."); 
-		boolean userExisted = !removedEntries.isEmpty();
+		boolean userExisted = config.containsKey(username);
 
 		// when updating an existing user password hash can be blank, which means no changes
 		
@@ -111,18 +114,20 @@ public class InternalUsersApiAction extends AbstractApiAction {
 		// for existing users, hash is optional
 		if(userExisted && additionalSettingsBuilder.get("hash") == null) {
 			// sanity check, this should usually not happen
-			if (!removedEntries.containsKey(username+".hash")) {
+			@SuppressWarnings("unchecked")
+			Map<String, String> existingUserSettings = (Map<String, String>)config.get(username);
+			if (!existingUserSettings.containsKey("hash")) {
 				return internalErrorResponse("Existing user " + username+" has no password, and no new password or hash was specified");
 			}
-			additionalSettingsBuilder.put("hash", removedEntries.get(username+".hash"));
+			additionalSettingsBuilder.put("hash", (String) existingUserSettings.get("hash"));
 		}
-		
+
+		config.remove(username);
+
 		// checks complete, create or update the user
-		final Settings additionalSettings = additionalSettingsBuilder.build();
+		config.put(username, Utils.convertJsonToxToStructuredMap(additionalSettingsBuilder.build()));
 		
-		// add user with settings
-		internaluser.put(prependValueToEachKey(additionalSettings.getAsMap(), username + "."));
-		save(client, request, ConfigConstants.CONFIGNAME_INTERNAL_USERS, internaluser);
+		save(client, request, ConfigConstants.CONFIGNAME_INTERNAL_USERS, Utils.convertStructuredMapToBytes(config));
 
 		if (userExisted) {
 			return successResponse("'" + username + "' updated", ConfigConstants.CONFIGNAME_INTERNAL_USERS);

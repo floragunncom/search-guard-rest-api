@@ -38,6 +38,7 @@ import org.elasticsearch.threadpool.ThreadPool;
 
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.PrivilegesEvaluator;
+import com.floragunn.searchguard.dlic.rest.support.Utils;
 import com.floragunn.searchguard.ssl.transport.PrincipalExtractor;
 import com.floragunn.searchguard.ssl.util.SSLRequestHelper;
 import com.floragunn.searchguard.ssl.util.SSLRequestHelper.SSLInfo;
@@ -96,7 +97,7 @@ public class RestApiPrivilegesEvaluator {
 		this.allEndpoints = Collections.unmodifiableMap(allEndpoints);
 
 		// setup role based permissions
-		allowedRoles.addAll(Arrays.asList(settings.getAsArray(ConfigConstants.SEARCHGUARD_RESTAPI_ROLES_ENABLED)));
+		allowedRoles.addAll(settings.getAsList(ConfigConstants.SEARCHGUARD_RESTAPI_ROLES_ENABLED));
 
 		this.roleBasedAccessEnabled = !allowedRoles.isEmpty();
 
@@ -139,8 +140,9 @@ public class RestApiPrivilegesEvaluator {
 			return Collections.emptyMap();
 		}
 
-		Map<Endpoint, List<Method>> disabledEndpoints = new HashMap<Endpoint, List<Method>>();
-		Map<String, Object> disabledEndpointsSettings = settings.getAsStructuredMap();
+		final Map<Endpoint, List<Method>> disabledEndpoints = new HashMap<Endpoint, List<Method>>();
+		
+		Map<String, Object> disabledEndpointsSettings = Utils.convertJsonToxToStructuredMap(settings);
 
 		for (Entry<String, Object> value : disabledEndpointsSettings.entrySet()) {
 			// key is the endpoint, see if it is a valid one

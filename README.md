@@ -6,10 +6,12 @@
 This module for [Search Guard](https://github.com/floragunncom/search-guard) adds user- and role management capabilities via REST API.
 
 ## Search Guard 6 and higher
-For Elasticsearch 6 this module comes already bundled with Search Guard 6. The 6.x source repository for this module is here https://github.com/floragunncom/search-guard-enterprise-modules. This repositor only contains code for Elasticsearch 5.x.
+For Elasticsearch 6 this module comes already bundled with Search Guard 6. No need to download it separately.
 
 ## Documentation
+
 Please refer to the official Search Guard documentation for installation and configuration instructions:
+
 [REST management API](http://docs.search-guard.com/latest/rest-api)
 
 ## Commercial use

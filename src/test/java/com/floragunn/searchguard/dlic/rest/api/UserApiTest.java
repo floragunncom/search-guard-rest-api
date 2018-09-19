@@ -54,7 +54,7 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		Map<String, String> settingsAsMap = settings.getAsMap();
 		Assert.assertEquals(1, settingsAsMap.size());
-		Assert.assertEquals("$2a$12$VcCDgh2NDk07JGN0rjGbM.Ad41qVR/YFJcgHp0UGns5JDymv..TOG",
+		Assert.assertEquals("",
 				settingsAsMap.get("admin.hash"));
 
 		// GET, user does not exist
@@ -213,7 +213,7 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
 		settingsAsMap = settings.getAsMap();
 		Assert.assertEquals(3, settingsAsMap.size());
-		Assert.assertNotEquals(null, Strings.emptyToNull(settingsAsMap.get("picard.hash")));
+		Assert.assertEquals(null, Strings.emptyToNull(settingsAsMap.get("picard.hash")));
 		Assert.assertEquals("starfleet", settingsAsMap.get("picard.roles.0").trim());
 		Assert.assertEquals("captains", settingsAsMap.get("picard.roles.1").trim());
 

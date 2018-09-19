@@ -15,6 +15,7 @@
 package com.floragunn.searchguard.dlic.rest.api;
 
 import java.util.Objects;
+import java.util.Set;
 
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.service.ClusterService;
@@ -100,4 +101,16 @@ public class UserApiAction extends AbstractApiAction {
 	protected AbstractConfigurationValidator getValidator(Method method, BytesReference ref) {
 		return new InternalUsersValidator(method, ref);
 	}
+	
+	@Override
+    protected void filter(Settings.Builder builder) {
+        super.filter(builder);
+        // replace password hashes in addition. We must not remove them from the
+        // Builder since this would remove users completely if they
+        // do not have any addition properties like roles or attributes
+        Set<String> entries = builder.build().getAsGroups().keySet();
+        for (String key : entries) {
+             builder.put(key + ".hash", "");
+         }      
+    }
 }

@@ -170,6 +170,10 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			final Settings.Builder additionalSettings) throws Throwable {
 		return notImplemented(Method.POST);
 	}
+	
+	protected void filter(Settings.Builder builder) {
+        // subclasses can implement resource filtering
+    }
 
 	protected Tuple<String[], RestResponse> handleGet(RestRequest request, Client client, Builder additionalSettings)
 			throws Throwable {
@@ -181,6 +185,10 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		}
 
 		final Settings.Builder configuration = load(getConfigName());
+		
+		// filter hidden resources and sensitive settings
+        filter(configuration);
+        
 
 		final Settings.Builder requestedConfiguration = copyKeysStartingWith(configuration.internalMap(),
 				resourcename + ".");

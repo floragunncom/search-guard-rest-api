@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -27,9 +28,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsAction;
-import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequest;
-import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.support.WriteRequest.RefreshPolicy;
@@ -45,6 +43,7 @@ import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.index.engine.VersionConflictEngineException;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
@@ -135,12 +134,12 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			return badRequestResponse("No " + getResourceName() + " specified");
 		}
 
-		final Settings.Builder existing = load(getConfigName());
+		final Tuple<Long, Settings.Builder> existing = load(getConfigName());
 
-		boolean modified = removeKeysStartingWith(existing.internalMap(), name + ".");
+		boolean modified = removeKeysStartingWith(existing.v2().internalMap(), name + ".");
 
 		if (modified) {
-			save(client, request, getConfigName(), existing);
+			save(client, request, getConfigName(), existing.v2(), existing.v1());
 			return successResponse(getResourceName() + " " + name + " deleted.", getConfigName());
 		} else {
 			return notFound(getResourceName() + " " + name + " not found.");
@@ -155,10 +154,10 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			return badRequestResponse("No " + getResourceName() + " specified");
 		}
 
-		final Settings.Builder existing = load(getConfigName());
-		boolean existed = removeKeysStartingWith(existing.internalMap(), name + ".");
-		existing.put(prependValueToEachKey(additionalSettingsBuilder.build().getAsMap(), name + "."));
-		save(client, request, getConfigName(), existing);
+		final Tuple<Long, Settings.Builder> existing = load(getConfigName());
+		boolean existed = removeKeysStartingWith(existing.v2().internalMap(), name + ".");
+		existing.v2().put(prependValueToEachKey(additionalSettingsBuilder.build().getAsMap(), name + "."));
+		save(client, request, getConfigName(), existing.v2(), existing.v1());
 		if (existed) {
 			return successResponse(getResourceName() + " " + name + " replaced.", getConfigName());
 		} else {
@@ -184,13 +183,13 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			return badRequestResponse("No " + getResourceName() + " specified.");
 		}
 
-		final Settings.Builder configuration = load(getConfigName());
+		final Tuple<Long, Settings.Builder> configuration = load(getConfigName());
 		
 		// filter hidden resources and sensitive settings
-        filter(configuration);
+        filter(configuration.v2());
         
 
-		final Settings.Builder requestedConfiguration = copyKeysStartingWith(configuration.internalMap(),
+		final Settings.Builder requestedConfiguration = copyKeysStartingWith(configuration.v2().internalMap(),
 				resourcename + ".");
 
 		if (requestedConfiguration.internalMap().size() == 0) {
@@ -201,12 +200,13 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 				new BytesRestResponse(RestStatus.OK, convertToJson(requestedConfiguration.build())));
 	}
 
-	protected final Settings.Builder load(final String config) {
-		return Settings.builder().put(loadAsSettings(config));
+	protected final Tuple<Long, Settings.Builder> load(final String config) {
+	    final Tuple<Long, Settings> settingsTuple = loadAsSettings(config);
+		return new Tuple<Long, Settings.Builder>(settingsTuple.v1(), Settings.builder().put(settingsTuple.v2()));
 	}
 
-	protected final Settings loadAsSettings(final String config) {
-		return cl.getConfiguration(config);
+	private final Tuple<Long, Settings> loadAsSettings(final String config) {
+		return cl.loadConfigurations(Collections.singleton(config)).get(config);
 	}
 
 	protected boolean ensureIndexExists(final Client client) throws Throwable {
@@ -214,7 +214,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	}
 	
 	protected void save(final Client client, final RestRequest request, final String config,
-			final Settings.Builder settings) throws Throwable {
+			final Settings.Builder settings, long version) throws Throwable {
 		final Semaphore sem = new Semaphore(0);
 		final List<Throwable> exception = new ArrayList<Throwable>(1);
 		final IndexRequest ir = new IndexRequest(this.searchguardIndex);
@@ -222,6 +222,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		//		new User((String) request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL)));
 
 		client.index(ir.type(config).id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE)
+		        .version(version)
 				.source(config, toSource(settings)), new ActionListener<IndexResponse>() {
 
 					@Override
@@ -328,7 +329,11 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 				sem.release();
 			}
 
-		} catch (final Throwable e) {
+		} catch (final VersionConflictEngineException e) {
+            logger.debug("Conflict {}", e, e);
+            request.params().clear();
+            return channel -> channel.sendResponse(conflict(request.method()).v2());
+        } catch (final Throwable e) {
 			logger.error("Unexpected exception {}", e, e);
 			request.params().clear();
 			return channel -> channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, e.toString()));
@@ -539,6 +544,10 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	protected Tuple<String[], RestResponse> notImplemented(Method method) {
 		return response(RestStatus.NOT_IMPLEMENTED, RestStatus.NOT_IMPLEMENTED.name(), "Method " + method.name() + " not supported for this action.");
 	}
+	
+	protected Tuple<String[], RestResponse> conflict(Method method) {
+        return response(RestStatus.CONFLICT, RestStatus.CONFLICT.name(), "Another process concurrently modified the same resource. Please try again.");
+    }
 	
 	/**
 	 * Consume all defined parameters for the request. Before we handle the request

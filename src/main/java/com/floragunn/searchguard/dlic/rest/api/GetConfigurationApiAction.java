@@ -81,9 +81,9 @@ public class GetConfigurationApiAction extends AbstractApiAction {
 
 		}
 
-		final Settings.Builder configBuilder = load(configname);
-        filter(configBuilder, configname);
-        final Settings config = configBuilder.build();
+		final Tuple<Long, Settings.Builder> configBuilder = load(configname);
+        filter(configBuilder.v2(), configname);
+        final Settings config = configBuilder.v2().build();
 
 		return new Tuple<String[], RestResponse>(new String[0],
 				new BytesRestResponse(RestStatus.OK, convertToJson(config)));

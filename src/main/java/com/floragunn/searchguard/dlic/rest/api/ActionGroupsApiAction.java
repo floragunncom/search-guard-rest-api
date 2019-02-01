@@ -56,16 +56,16 @@ public class ActionGroupsApiAction extends AbstractApiAction {
 			return badRequestResponse("No " + getResourceName() + " specified");
 		}
 
-		final Settings.Builder existing = load(getConfigName());
+		final Tuple<Long, Settings.Builder> existing = load(getConfigName());
 		// remove all existing entries
-		boolean existed = removeKeysStartingWith(existing.internalMap(), name + ".");
+		boolean existed = removeKeysStartingWith(existing.v2().internalMap(), name + ".");
 		// remove bogus "permissions" from the JSON payload
 		Map<String, String> newSettings = additionalSettingsBuilder.build().getAsMap();
 		newSettings = removeLeadingValueFromEachKey(newSettings, "permissions");
 		newSettings = prependValueToEachKey(newSettings, name);
-		existing.put(newSettings);
+		existing.v2().put(newSettings);
 
-		save(client, request, getConfigName(), existing);
+		save(client, request, getConfigName(), existing.v2(), existing.v1());
 		if (existed) {
 			return successResponse(getResourceName() + " " + name + " replaced.", getConfigName());
 		} else {

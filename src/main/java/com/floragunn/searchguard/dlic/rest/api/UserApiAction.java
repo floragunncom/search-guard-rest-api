@@ -68,12 +68,12 @@ public class UserApiAction extends AbstractApiAction {
 		final Settings additionalSettings = additionalSettingsBuilder.build();
 
 		// first, remove any existing user
-		final Settings.Builder internaluser = load(ConfigConstants.CONFIGNAME_INTERNAL_USERS);
-		boolean userExisted = removeKeysStartingWith(internaluser.internalMap(), username + ".");
+		final Tuple<Long, Settings.Builder> internaluser = load(ConfigConstants.CONFIGNAME_INTERNAL_USERS);
+		boolean userExisted = removeKeysStartingWith(internaluser.v2().internalMap(), username + ".");
 
 		// add user with settings
-		internaluser.put(prependValueToEachKey(additionalSettings.getAsMap(), username + "."));
-		save(client, request, ConfigConstants.CONFIGNAME_INTERNAL_USERS, internaluser);
+		internaluser.v2().put(prependValueToEachKey(additionalSettings.getAsMap(), username + "."));
+		save(client, request, ConfigConstants.CONFIGNAME_INTERNAL_USERS, internaluser.v2(), internaluser.v1());
 
 		if (userExisted) {
 			return successResponse("User " + username + " updated", ConfigConstants.CONFIGNAME_INTERNAL_USERS);

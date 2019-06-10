@@ -20,22 +20,22 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsAction;
-import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequest;
-import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.support.WriteRequest.RefreshPolicy;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.cluster.service.ClusterService;
+import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.settings.Settings;
@@ -44,7 +44,9 @@ import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
@@ -53,6 +55,11 @@ import org.elasticsearch.rest.RestRequest.Method;
 import org.elasticsearch.rest.RestResponse;
 import org.elasticsearch.rest.RestStatus;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.flipkart.zjsonpatch.JsonPatch;
+import com.flipkart.zjsonpatch.JsonPatchApplicationException;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateAction;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateNodeResponse;
 import com.floragunn.searchguard.action.configupdate.ConfigUpdateRequest;
@@ -68,6 +75,7 @@ import com.floragunn.searchguard.support.ConfigConstants;
 
 public abstract class AbstractApiAction extends BaseRestHandler {
 
+    protected static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 	private final AdminDNs adminDNs;
 	protected final ConfigurationRepository cl;
 	private final ClusterService cs;
@@ -171,6 +179,54 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		return notImplemented(Method.POST);
 	}
 	
+    protected Tuple<String[], RestResponse> handlePostAsPatch(RestRequest request, Client client, Builder additionalSettings) throws Throwable {
+        
+        JsonNode jsonPatch;
+
+        try {
+            jsonPatch = OBJECT_MAPPER.readTree(request.content().utf8ToString());
+        } catch (IOException e) {
+            logger.debug("Error while parsing JSON patch", e);
+            return badRequestResponse("Error in JSON patch: " + e.getMessage());
+        }
+
+        final Builder existing = load(getConfigName());
+        JsonNode existingAsJsonNode = convertJsonToJackson(existing.build());
+
+        if (!(existingAsJsonNode instanceof ObjectNode)) {
+            return internalErrorResponse("Config " + getConfigName() + " is malformed");
+        }
+
+        ObjectNode existingAsObjectNode = (ObjectNode) existingAsJsonNode;
+        
+        JsonNode patchedAsJsonNode;
+
+        try {
+            patchedAsJsonNode = JsonPatch.apply(jsonPatch, existingAsObjectNode);
+        } catch (JsonPatchApplicationException e) {
+            logger.debug("Error while applying JSON patch", e);
+            return badRequestResponse(e.getMessage());
+        }
+        Iterator<String> fieldIt = patchedAsJsonNode.fieldNames();
+        while(fieldIt.hasNext()) {
+            BytesReference patchedAsBytesReference = new BytesArray(
+                    OBJECT_MAPPER.writeValueAsString(patchedAsJsonNode.get(fieldIt.next())).getBytes());
+            AbstractConfigurationValidator validator = getValidator(Method.PUT, patchedAsBytesReference);
+            if (!validator.validateSettings()) {
+                request.params().clear();
+                return new Tuple<String[], RestResponse>(new String[0],
+                        new BytesRestResponse(RestStatus.BAD_REQUEST, validator.errorsAsXContent()));
+            }
+        }
+        
+        BytesReference patchedAsBytesReference = new BytesArray(
+                OBJECT_MAPPER.writeValueAsString(patchedAsJsonNode).getBytes());
+
+        save(client, request, getConfigName(), patchedAsBytesReference);
+        return successResponse("Resource updated.", getConfigName());
+    }
+
+	
 	protected void filter(Settings.Builder builder) {
         // subclasses can implement resource filtering
     }
@@ -214,7 +270,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	}
 	
 	protected void save(final Client client, final RestRequest request, final String config,
-			final Settings.Builder settings) throws Throwable {
+			final BytesReference source) throws Throwable {
 		final Semaphore sem = new Semaphore(0);
 		final List<Throwable> exception = new ArrayList<Throwable>(1);
 		final IndexRequest ir = new IndexRequest(this.searchguardIndex);
@@ -222,7 +278,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		//		new User((String) request.getFromContext(ConfigConstants.SG_SSL_PRINCIPAL)));
 
 		client.index(ir.type(config).id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE)
-				.source(config, toSource(settings)), new ActionListener<IndexResponse>() {
+				.source(config, source), new ActionListener<IndexResponse>() {
 
 					@Override
 					public void onResponse(final IndexResponse response) {
@@ -251,6 +307,11 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		}
 
 	}
+    
+	protected void save(final Client client, final RestRequest request, final String config,
+            final Settings.Builder settings) throws Throwable {
+        save(client, request, config, toSource(settings));
+    }
 
 	
 	
@@ -539,6 +600,16 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	protected Tuple<String[], RestResponse> notImplemented(Method method) {
 		return response(RestStatus.NOT_IMPLEMENTED, RestStatus.NOT_IMPLEMENTED.name(), "Method " + method.name() + " not supported for this action.");
 	}
+	
+    protected JsonNode convertJsonToJackson(ToXContent jsonContent) {
+        try {
+            final BytesReference bytes = XContentHelper.toXContent(jsonContent, XContentType.JSON, false);
+            return OBJECT_MAPPER.readTree(bytes.utf8ToString());
+        } catch (IOException e1) {
+            throw ExceptionsHelper.convertToElastic(e1);
+        }
+    }
+
 	
 	/**
 	 * Consume all defined parameters for the request. Before we handle the request

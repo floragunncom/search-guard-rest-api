@@ -33,11 +33,13 @@ import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentHelper;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.rest.RestRequest.Method;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
+import com.floragunn.searchguard.dlic.rest.validation.AbstractConfigurationValidator.ErrorType;
 import com.google.common.base.Joiner;
 
 public abstract class AbstractConfigurationValidator {
@@ -92,13 +94,14 @@ public abstract class AbstractConfigurationValidator {
 
 	public boolean validateSettings() {
 		// no payload for DELETE and GET requests
-		if (method.equals(Method.DELETE) || method.equals(Method.GET)) {
+		if (method.equals(Method.DELETE) || method.equals(Method.GET) || method.equals(Method.POST)) {
 			return true;
 		}
 		// try to parse payload
 		try {
 			this.settingsBuilder = toSettingsBuilder(content);
 		} catch (ElasticsearchException e) {
+		    log.error(ErrorType.BODY_NOT_PARSEABLE.toString(), e);
 			this.errorType = ErrorType.BODY_NOT_PARSEABLE;
 			return false;
 		}
@@ -143,6 +146,7 @@ public abstract class AbstractConfigurationValidator {
 				return false;
 			}
 		} catch (Exception e) {
+		    log.error(ErrorType.BODY_NOT_PARSEABLE.toString(), e);
 			this.errorType = ErrorType.BODY_NOT_PARSEABLE;
 			return false;
 		}
@@ -230,16 +234,16 @@ public abstract class AbstractConfigurationValidator {
 	}
 
 	private Settings.Builder toSettingsBuilder(final BytesReference ref) {
-		if (ref == null || ref.length() == 0) {
-			return Settings.builder();
-		}
+        if (ref == null || ref.length() == 0) {
+            return Settings.builder();
+        }
 
-		try {
-			return Settings.builder().put(new JsonSettingsLoader(true).load(XContentHelper.createParser(NamedXContentRegistry.EMPTY, ref)));
-		} catch (final IOException e) {
-			throw ExceptionsHelper.convertToElastic(e);
-		}
-	}
+        try {
+            return Settings.builder().loadFromSource(ref.utf8ToString(), XContentType.JSON);
+        } catch (final Exception e) {
+            throw ExceptionsHelper.convertToElastic(e);
+        }
+    }
 
 	public static enum DataType {
 		STRING,

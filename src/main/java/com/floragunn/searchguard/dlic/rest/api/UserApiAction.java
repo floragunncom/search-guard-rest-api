@@ -23,6 +23,7 @@ import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestRequest.Method;
@@ -47,6 +48,7 @@ public class UserApiAction extends AbstractApiAction {
 		controller.registerHandler(Method.GET, "/_searchguard/api/user/", this);
 		controller.registerHandler(Method.DELETE, "/_searchguard/api/user/{name}", this);
 		controller.registerHandler(Method.PUT, "/_searchguard/api/user/{name}", this);
+		controller.registerHandler(Method.POST, "/_searchguard/api/user/", this);
 	}
 
 	@Override
@@ -112,5 +114,10 @@ public class UserApiAction extends AbstractApiAction {
         for (String key : entries) {
              builder.put(key + ".hash", "");
          }      
+    }
+	
+	@Override
+    protected Tuple<String[], RestResponse> handlePost(RestRequest request, Client client, Builder additionalSettings) throws Throwable {
+        return handlePostAsPatch(request, client, additionalSettings);
     }
 }

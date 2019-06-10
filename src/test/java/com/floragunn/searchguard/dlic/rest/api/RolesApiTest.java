@@ -30,6 +30,26 @@ import com.floragunn.searchguard.test.helper.rest.RestHelper.HttpResponse;
 
 public class RolesApiTest extends AbstractRestApiUnitTest {
 
+    @Test
+    public void testPatchApi() throws Exception {
+        setup();
+        
+        rh.keystore = "kirk-keystore.jks";
+        rh.sendHTTPClientCertificate = true;
+
+        // check roles exists
+        HttpResponse response = rh.executeGetRequest("_searchguard/api/configuration/roles");
+        Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+        Assert.assertFalse(response.getBody().contains("newrole"));
+        
+        response = rh.executePostRequest("_searchguard/api/roles", "[{ \"op\": \"add\", \"path\": \"/newrole\", \"value\": { \"cluster\": [\"bar\"] } }]");
+        Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+        
+        response = rh.executeGetRequest("_searchguard/api/configuration/roles");
+        Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+        Assert.assertTrue(response.getBody().contains("newrole"));
+    }
+    
 	@Test
 	public void testRolesApi() throws Exception {
 
@@ -89,7 +109,7 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
 		// only starfleet role left, write access to ships is forbidden now
 		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 1);
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
-		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
+		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "public", 0);
 
 		rh.sendHTTPClientCertificate = true;
 		// remove also starfleet role, nothing is allowed anymore
@@ -143,7 +163,7 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
 		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 0);
-		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
+		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "public", 0);
 
 		rh.sendHTTPClientCertificate = true;
 

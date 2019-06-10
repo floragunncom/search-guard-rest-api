@@ -93,7 +93,7 @@ public class RolesMappingApiTest extends AbstractRestApiUnitTest {
 		// public, but not to ships
 		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 1);
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 1);
-		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 1);
+		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "public", 1);
 
 		// remove also sg_role_starfleet, poor picard has no mapping left
 		rh.sendHTTPClientCertificate = true;

@@ -37,6 +37,7 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicHeader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -128,6 +129,8 @@ public class RestHelper {
 					uriRequest.addHeader(h);
 				}
 			}
+			
+			uriRequest.addHeader(new BasicHeader("content-type", "application/json"));
 
 			HttpResponse res = new HttpResponse(httpClient.execute(uriRequest));
 			log.debug(res.getBody());

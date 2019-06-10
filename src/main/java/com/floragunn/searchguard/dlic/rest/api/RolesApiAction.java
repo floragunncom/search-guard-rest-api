@@ -17,9 +17,13 @@ package com.floragunn.searchguard.dlic.rest.api;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.bytes.BytesReference;
+import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.rest.RestController;
+import org.elasticsearch.rest.RestRequest;
+import org.elasticsearch.rest.RestResponse;
 import org.elasticsearch.rest.RestRequest.Method;
 
 import com.floragunn.searchguard.configuration.AdminDNs;
@@ -39,6 +43,7 @@ public class RolesApiAction extends AbstractApiAction {
 		controller.registerHandler(Method.GET, "/_searchguard/api/roles/{name}", this);
 		controller.registerHandler(Method.DELETE, "/_searchguard/api/roles/{name}", this);
 		controller.registerHandler(Method.PUT, "/_searchguard/api/roles/{name}", this);
+		controller.registerHandler(Method.POST, "/_searchguard/api/roles/", this);
 	}
 
 	@Override
@@ -55,5 +60,10 @@ public class RolesApiAction extends AbstractApiAction {
 	protected String getConfigName() {
 		return ConfigConstants.CONFIGNAME_ROLES;
 	}
+	
+	@Override
+    protected Tuple<String[], RestResponse> handlePost(RestRequest request, Client client, Builder additionalSettings) throws Throwable {
+        return handlePostAsPatch(request, client, additionalSettings);
+    }
 	
 }

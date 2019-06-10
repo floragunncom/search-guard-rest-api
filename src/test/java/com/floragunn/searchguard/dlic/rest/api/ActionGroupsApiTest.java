@@ -66,7 +66,7 @@ public class ActionGroupsApiTest extends AbstractRestApiUnitTest {
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
 		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 0);
-		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
+		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "public", 0);
 
 		// -- DELETE
 		// Non-existing role

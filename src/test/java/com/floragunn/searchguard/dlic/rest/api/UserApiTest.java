@@ -197,15 +197,15 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
 		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 1);
-		checkWriteAccess(HttpStatus.SC_CREATED, "picard", "picard", "sf", "public", 1);
+		checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "public", 1);
 
 		// overwrite user picard, and give him role "starfleet" plus "captains
 		addUserWithPassword("picard", "picard", new String[] { "starfleet", "captains" }, HttpStatus.SC_OK);
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
 		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
-		checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 1);
+		checkReadAccess(HttpStatus.SC_NOT_FOUND, "picard", "picard", "sf", "public", 1);
 		checkWriteAccess(HttpStatus.SC_CREATED, "picard", "picard", "sf", "ships", 1);
-		checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 1);
+		checkWriteAccess(HttpStatus.SC_CREATED, "picard", "picard", "sf", "public", 1);
 
 		rh.sendHTTPClientCertificate = true;
 		response = rh.executeGetRequest("/_searchguard/api/user/picard", new Header[0]);

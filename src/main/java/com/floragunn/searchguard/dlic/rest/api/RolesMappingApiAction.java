@@ -17,10 +17,14 @@ package com.floragunn.searchguard.dlic.rest.api;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.bytes.BytesReference;
+import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.rest.RestController;
+import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestRequest.Method;
+import org.elasticsearch.rest.RestResponse;
 
 import com.floragunn.searchguard.configuration.AdminDNs;
 import com.floragunn.searchguard.configuration.IndexBaseConfigurationRepository;
@@ -40,6 +44,7 @@ public class RolesMappingApiAction extends AbstractApiAction {
 		controller.registerHandler(Method.GET, "/_searchguard/api/rolesmapping/{name}", this);
 		controller.registerHandler(Method.DELETE, "/_searchguard/api/rolesmapping/{name}", this);
 		controller.registerHandler(Method.PUT, "/_searchguard/api/rolesmapping/{name}", this);
+		controller.registerHandler(Method.POST, "/_searchguard/api/rolesmapping/", this);
 	}
 
 	@Override
@@ -57,4 +62,8 @@ public class RolesMappingApiAction extends AbstractApiAction {
 		return ConfigConstants.CONFIGNAME_ROLES_MAPPING;
 	}
 
+    @Override
+    protected Tuple<String[], RestResponse> handlePost(RestRequest request, Client client, Builder additionalSettings) throws Throwable {
+        return handlePostAsPatch(request, client, additionalSettings);
+    }
 }

@@ -26,10 +26,12 @@ public class InternalUsersValidator extends AbstractConfigurationValidator {
 		if(method == Method.POST) {
 		    allowedKeys.put("hash", DataType.STRING);
 	        allowedKeys.put("roles", DataType.ARRAY);
+	        allowedKeys.put("username", DataType.STRING);
 		} else {
 		    allowedKeys.put("hash", DataType.STRING);
 	        allowedKeys.put("password", DataType.STRING);
 	        allowedKeys.put("roles", DataType.ARRAY);
+	        allowedKeys.put("username", DataType.STRING);
 	        mandatoryOrKeys.add("hash");
 	        mandatoryOrKeys.add("password");
 		}

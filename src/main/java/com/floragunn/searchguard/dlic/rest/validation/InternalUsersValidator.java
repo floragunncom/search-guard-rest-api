@@ -22,11 +22,19 @@ public class InternalUsersValidator extends AbstractConfigurationValidator {
 	public InternalUsersValidator(final Method method, BytesReference ref) {
 		super(method, ref);
 		this.payloadMandatory = true;
-		allowedKeys.put("hash", DataType.STRING);
-		allowedKeys.put("password", DataType.STRING);
-		allowedKeys.put("roles", DataType.ARRAY);
-		mandatoryOrKeys.add("hash");
-		mandatoryOrKeys.add("password");
+		
+		if(method == Method.POST) {
+		    allowedKeys.put("hash", DataType.STRING);
+	        allowedKeys.put("roles", DataType.ARRAY);
+		} else {
+		    allowedKeys.put("hash", DataType.STRING);
+	        allowedKeys.put("password", DataType.STRING);
+	        allowedKeys.put("roles", DataType.ARRAY);
+	        mandatoryOrKeys.add("hash");
+	        mandatoryOrKeys.add("password");
+		}
+		
+		
 	}
 
 }

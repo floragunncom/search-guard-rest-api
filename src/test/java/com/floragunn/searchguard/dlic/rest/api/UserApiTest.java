@@ -218,5 +218,38 @@ public class UserApiTest extends AbstractRestApiUnitTest {
 		Assert.assertEquals("captains", settingsAsMap.get("picard.roles.1").trim());
 
 	}
+	
+	@Test
+    public void testPatchApi() throws Exception {
+        setup();
+        
+        rh.keystore = "kirk-keystore.jks";
+        rh.sendHTTPClientCertificate = true;
+
+        // check roles exists
+        HttpResponse response = rh.executeGetRequest("_searchguard/api/configuration/internalusers");
+        Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+        Assert.assertFalse(response.getBody().contains("newuser"));
+        
+        response = rh.executePostRequest("_searchguard/api/user", "[{ \"op\": \"add\", \"path\": \"/newuser\", \"value\": { \"hash\": \"xxx\" } }]");
+        Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+        
+        response = rh.executeGetRequest("_searchguard/api/configuration/internalusers");
+        Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+        Assert.assertTrue(response.getBody().contains("newuser"));
+        
+        String payload="["+
+            "{ \"op\": \"add\", \"path\": \"/testuser1\",  \"value\": { \"hash\":\"test\",\"roles\":[\"role1\"] } },"+
+            "{ \"op\": \"add\", \"path\": \"/testuser2\",  \"value\": { \"hash\":\"test\",\"roles\":[\"role2\"] } },"+
+            "{ \"op\": \"add\", \"path\": \"/testuser3\",  \"value\": { \"hash\":\"test\",\"roles\":[\"role3\"] } }"+
+         "]";
+        
+        response = rh.executePostRequest("_searchguard/api/user", payload);
+        Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+        
+        response = rh.executeGetRequest("_searchguard/api/configuration/internalusers");
+        Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+        Assert.assertTrue(response.getBody().contains("testuser3"));
+    }
 
 }

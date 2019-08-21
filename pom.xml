@@ -14,7 +14,7 @@
 
   <groupId>com.floragunn</groupId>
   <artifactId>dlic-search-guard-rest-api</artifactId>
-  <version>5.3-9s-SNAPSHOT</version>
+  <version>5.3-9s-withjackson-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>Search Guard</name>
@@ -94,6 +94,7 @@
           <groupId>com.fasterxml.jackson.core</groupId>
         </exclusion>
       </exclusions>
+      <!-- <scope>provided</scope> -->
     </dependency>
     
     <dependency>
